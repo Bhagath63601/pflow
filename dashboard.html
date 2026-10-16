@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PulseFlow — Intelligent Hospital Administration System</title>
+<meta name="description" content="PulseFlow: AI-powered hospital flow intelligence, predictive analytics, and bottleneck prevention engine."/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{mint:'#00F090','mint-light':'#E8FFF4','mint-slate':'#F1F6F3','vital-rose':'#FF3B30','vital-amber':'#FF9F1C','sidebar-dark':'#0F172A','sidebar-mid':'#1E293B','sidebar-hover':'#334155'}}}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{font-family:'Inter',system-ui,sans-serif;margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;color:#1e293b;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#f1f5f9}::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px}
+.nav-item{transition:all .2s}
+.nav-item:hover,.nav-item.active{background:#334155;color:#00F090}
+.kpi-card{transition:transform .2s,box-shadow .2s}.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,.08)}
+.table-row{transition:background .15s}.table-row:hover{background:#f0fdf4}
+.tab-btn{transition:all .2s}.tab-btn.active{color:#00F090;border-bottom:2px solid #00F090}
+.drawer-overlay{transition:opacity .3s}.drawer-panel{transition:transform .3s}
+.pulse{animation:pulse-ring 2s ease-out infinite}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(0,240,144,.5)}70%{box-shadow:0 0 0 8px rgba(0,240,144,0)}100%{box-shadow:0 0 0 0 rgba(0,240,144,0)}}
+.fade-in{animation:fadeIn .4s ease-out}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.progress-bar{transition:width 1s ease-out}
+.badge{font-size:10px;padding:2px 8px;border-radius:9999px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.modal-backdrop{background:rgba(15,23,42,.6);backdrop-filter:blur(4px)}
+.sim-bar{transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.chart-container{position:relative;height:280px}
+.alert-pulse{animation:alertPulse 1.5s ease-in-out infinite}
+@keyframes alertPulse{0%,100%{opacity:1}50%{opacity:.6}}
+</style>
+</head>
+<body class="bg-white">
+
+<!-- ===================== SIDEBAR ===================== -->
+<aside id="sidebar" class="fixed left-0 top-0 h-full w-60 bg-sidebar-dark text-white z-50 flex flex-col">
+  <div class="p-5 border-b border-slate-700">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-mint flex items-center justify-center pulse">
+        <i data-lucide="activity" class="w-5 h-5 text-sidebar-dark"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight">PulseFlow</h1>
+        <p class="text-[10px] text-slate-400 tracking-widest uppercase">Hospital Intelligence</p>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+    <div class="text-[10px] text-slate-500 uppercase tracking-wider px-3 mb-2 mt-1">Phase 1 · Foundation</div>
+    <a onclick="showPage('overview')" class="nav-item active flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-overview">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i>Overview
+    </a>
+    <a onclick="showPage('patients')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-patients">
+      <i data-lucide="users" class="w-4 h-4"></i>Patients
+    </a>
+    <a onclick="showPage('departments')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-departments">
+      <i data-lucide="building-2" class="w-4 h-4"></i>Departments
+    </a>
+    <a onclick="showPage('investigate')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-investigate">
+      <i data-lucide="search" class="w-4 h-4"></i>Investigate First
+    </a>
+    <div class="text-[10px] text-slate-500 uppercase tracking-wider px-3 mb-2 mt-5">Phase 2 · Predictive ML</div>
+    <a onclick="showPage('flowcast')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-flowcast">
+      <i data-lucide="brain" class="w-4 h-4"></i>FlowCast ML
+    </a>
+    <div class="text-[10px] text-slate-500 uppercase tracking-wider px-3 mb-2 mt-5">Phase 3 · AI Simulation</div>
+    <a onclick="showPage('simulator')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-simulator">
+      <i data-lucide="flask-conical" class="w-4 h-4"></i>Simulator
+    </a>
+    <div class="text-[10px] text-slate-500 uppercase tracking-wider px-3 mb-2 mt-5">Phase 4 · Automation</div>
+    <a onclick="showPage('alerts')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-alerts">
+      <i data-lucide="bell-ring" class="w-4 h-4"></i>Alerts & FHIR
+    </a>
+    <a onclick="showPage('reports')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-reports">
+      <i data-lucide="file-bar-chart" class="w-4 h-4"></i>Reports
+    </a>
+    <a onclick="showPage('settings')" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm" id="nav-settings">
+      <i data-lucide="settings" class="w-4 h-4"></i>Settings
+    </a>
+  </nav>
+  <div class="p-4 border-t border-slate-700">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-mint/20 flex items-center justify-center text-mint text-xs font-bold">CN</div>
+      <div>
+        <div class="text-xs font-medium">Charge Nurse</div>
+        <div class="text-[10px] text-slate-400">On Duty · Shift A</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ===================== MAIN CONTENT ===================== -->
+<main class="ml-60 min-h-screen">
+
+  <!-- Top Bar -->
+  <header class="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-100 z-40 px-6 py-3 flex items-center justify-between">
+    <div>
+      <h2 id="pageTitle" class="text-lg font-semibold text-slate-800">Dashboard Overview</h2>
+      <p id="pageSubtitle" class="text-xs text-slate-400">Real-time hospital operations intelligence</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <input type="text" id="globalSearch" placeholder="Search patients, departments..." class="text-sm pl-9 pr-4 py-2 rounded-lg bg-slate-50 border border-slate-200 w-64 focus:outline-none focus:ring-2 focus:ring-mint/40 focus:border-mint" oninput="handleGlobalSearch(this.value)"/>
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+      </div>
+      <button onclick="refreshData()" class="p-2 rounded-lg hover:bg-slate-100 transition" title="Refresh Data">
+        <i data-lucide="refresh-cw" class="w-4 h-4 text-slate-500"></i>
+      </button>
+      <div class="text-xs text-slate-400" id="clockDisplay"></div>
+    </div>
+  </header>
+
+  <!-- Loading -->
+  <div id="loadingScreen" class="flex items-center justify-center h-[80vh]">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-mint/20 border-t-mint rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-sm text-slate-500">Loading hospital data...</p>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: OVERVIEW ===================== -->
+  <div id="page-overview" class="page hidden p-6 space-y-6 fade-in">
+    <!-- KPI Row -->
+    <div class="grid grid-cols-4 gap-4" id="kpiRow"></div>
+    <!-- Charts Row -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="col-span-2 bg-white rounded-xl border border-slate-100 p-5">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Admissions & Discharges Trend</h3>
+        <div class="chart-container"><canvas id="admissionsChart"></canvas></div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-100 p-5">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Visit Type Distribution</h3>
+        <div class="chart-container"><canvas id="visitTypeChart"></canvas></div>
+      </div>
+    </div>
+    <!-- Department Heatmap + Recent -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="col-span-2 bg-white rounded-xl border border-slate-100 p-5">
+        <h3 class="text-sm font-semibold text-slate-700 mb-4">Department Capacity Heatmap</h3>
+        <div id="deptHeatmap" class="grid grid-cols-3 gap-3"></div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-100 p-5">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Recent Activity</h3>
+        <div id="recentActivity" class="space-y-3 max-h-80 overflow-y-auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: PATIENTS ===================== -->
+  <div id="page-patients" class="page hidden p-6 space-y-5 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex gap-2">
+        <button onclick="setPatientTab('active')" class="tab-btn active px-4 py-2 text-sm font-medium border-b-2 border-transparent" id="ptab-active">Active Patients</button>
+        <button onclick="setPatientTab('discharged')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent" id="ptab-discharged">Discharged</button>
+        <button onclick="setPatientTab('all')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent" id="ptab-all">All Records</button>
+      </div>
+      <div class="flex gap-2">
+        <select id="patDeptFilter" onchange="renderPatients()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-mint/40">
+          <option value="">All Departments</option>
+        </select>
+        <button onclick="openAddPatientModal()" class="bg-mint hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>Add Patient
+        </button>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-mint-slate text-slate-600">
+          <tr>
+            <th class="text-left px-4 py-3 font-medium">Patient ID</th>
+            <th class="text-left px-4 py-3 font-medium">Age / Sex</th>
+            <th class="text-left px-4 py-3 font-medium">Condition</th>
+            <th class="text-left px-4 py-3 font-medium">Department</th>
+            <th class="text-left px-4 py-3 font-medium">Visit Type</th>
+            <th class="text-left px-4 py-3 font-medium">Triage</th>
+            <th class="text-left px-4 py-3 font-medium">Wait (min)</th>
+            <th class="text-left px-4 py-3 font-medium">Status</th>
+            <th class="text-left px-4 py-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="patientsTableBody"></tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between text-sm text-slate-500">
+      <span id="patientCount"></span>
+      <div class="flex gap-2" id="patientPagination"></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: DEPARTMENTS ===================== -->
+  <div id="page-departments" class="page hidden p-6 space-y-5 fade-in">
+    <div class="grid grid-cols-4 gap-4" id="deptKPIs"></div>
+    <div class="bg-white rounded-xl border border-slate-100 p-5">
+      <h3 class="text-sm font-semibold text-slate-700 mb-3">Department Comparison</h3>
+      <div style="height:320px"><canvas id="deptCompareChart"></canvas></div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-mint-slate text-slate-600">
+          <tr>
+            <th class="text-left px-4 py-3 font-medium">Department</th>
+            <th class="text-left px-4 py-3 font-medium">Type</th>
+            <th class="text-left px-4 py-3 font-medium">Staff</th>
+            <th class="text-left px-4 py-3 font-medium">Beds</th>
+            <th class="text-left px-4 py-3 font-medium">Capacity</th>
+            <th class="text-left px-4 py-3 font-medium">Active</th>
+            <th class="text-left px-4 py-3 font-medium">Utilization</th>
+            <th class="text-left px-4 py-3 font-medium">Avg Wait</th>
+            <th class="text-left px-4 py-3 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody id="deptTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: INVESTIGATE FIRST ===================== -->
+  <div id="page-investigate" class="page hidden p-6 space-y-5 fade-in">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-semibold text-slate-800">Investigate First Queue</h3>
+        <p class="text-xs text-slate-400 mt-1">Patients ranked by composite bottleneck risk score</p>
+      </div>
+      <div class="flex gap-2">
+        <select id="invTriageFilter" onchange="renderInvestigate()" class="text-sm border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">All Triage Levels</option>
+          <option value="Critical">Critical</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        <select id="invDeptFilter" onchange="renderInvestigate()" class="text-sm border border-slate-200 rounded-lg px-3 py-2">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-mint-slate text-slate-600">
+          <tr>
+            <th class="text-left px-4 py-3 font-medium">Rank</th>
+            <th class="text-left px-4 py-3 font-medium">Patient</th>
+            <th class="text-left px-4 py-3 font-medium">Department</th>
+            <th class="text-left px-4 py-3 font-medium">Triage</th>
+            <th class="text-left px-4 py-3 font-medium">Wait (min)</th>
+            <th class="text-left px-4 py-3 font-medium">Risk Score</th>
+            <th class="text-left px-4 py-3 font-medium">Root Cause</th>
+            <th class="text-left px-4 py-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="investigateTableBody"></tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between text-sm text-slate-500">
+      <span id="invCount"></span>
+      <div class="flex gap-2" id="invPagination"></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: FLOWCAST ML ===================== -->
+  <div id="page-flowcast" class="page hidden p-6 space-y-5 fade-in">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-semibold text-slate-800 flex items-center gap-2">
+          <i data-lucide="brain" class="w-5 h-5 text-mint"></i>FlowCast — Predictive ML Engine
+        </h3>
+        <p class="text-xs text-slate-400 mt-1">Gradient Boosted Trees trained on 8,000 historical encounters</p>
+      </div>
+      <button onclick="trainModel()" id="trainBtn" class="bg-mint hover:bg-emerald-500 text-white text-sm font-medium px-5 py-2.5 rounded-lg flex items-center gap-2 transition">
+        <i data-lucide="play" class="w-4 h-4"></i>Train Model
+      </button>
+    </div>
+    <!-- Model Status -->
+    <div id="mlStatus" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex items-center gap-3">
+      <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500"></i>
+      <span>Model not yet trained. Click <strong>"Train Model"</strong> to train on historical encounter data.</span>
+    </div>
+    <div id="mlResults" class="hidden space-y-5">
+      <!-- Training Metrics -->
+      <div class="grid grid-cols-4 gap-4" id="mlKPIs"></div>
+      <!-- Charts -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl border border-slate-100 p-5">
+          <h3 class="text-sm font-semibold text-slate-700 mb-3">Feature Importance</h3>
+          <div style="height:280px"><canvas id="featureChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-100 p-5">
+          <h3 class="text-sm font-semibold text-slate-700 mb-3">Predicted vs Actual Wait Times</h3>
+          <div style="height:280px"><canvas id="predVsActualChart"></canvas></div>
+        </div>
+      </div>
+      <!-- Predictions Table -->
+      <div class="bg-white rounded-xl border border-slate-100 p-5">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Live Predictions — Active Patients</h3>
+        <div class="overflow-auto max-h-96">
+          <table class="w-full text-sm">
+            <thead class="bg-mint-slate text-slate-600">
+              <tr>
+                <th class="text-left px-4 py-3 font-medium">Patient</th>
+                <th class="text-left px-4 py-3 font-medium">Department</th>
+                <th class="text-left px-4 py-3 font-medium">Triage</th>
+                <th class="text-left px-4 py-3 font-medium">Actual Wait</th>
+                <th class="text-left px-4 py-3 font-medium">Predicted Wait</th>
+                <th class="text-left px-4 py-3 font-medium">Delay Risk</th>
+                <th class="text-left px-4 py-3 font-medium">Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="predTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: SIMULATOR ===================== -->
+  <div id="page-simulator" class="page hidden p-6 space-y-5 fade-in">
+    <div>
+      <h3 class="text-base font-semibold text-slate-800 flex items-center gap-2">
+        <i data-lucide="flask-conical" class="w-5 h-5 text-mint"></i>FlowCast AI — Recommendations & Simulation
+      </h3>
+      <p class="text-xs text-slate-400 mt-1">Simulate capacity changes and evaluate impact on hospital operations</p>
+    </div>
+    <!-- AI Recommendations -->
+    <div class="bg-gradient-to-r from-emerald-50 to-mint-light rounded-xl border border-emerald-200 p-5">
+      <h4 class="text-sm font-semibold text-emerald-800 mb-3 flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4"></i>AI-Generated Recommendations</h4>
+      <div id="aiRecommendations" class="space-y-2"></div>
+    </div>
+    <!-- Simulation Controls -->
+    <div class="bg-white rounded-xl border border-slate-100 p-5">
+      <h4 class="text-sm font-semibold text-slate-700 mb-4">Simulation Parameters</h4>
+      <div class="grid grid-cols-4 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 mb-1 block">Additional Beds</label>
+          <input type="number" id="simBeds" value="8" min="0" max="100" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-mint/40"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 mb-1 block">Additional Staff</label>
+          <input type="number" id="simStaff" value="2" min="0" max="50" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-mint/40"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 mb-1 block">Target Department</label>
+          <select id="simDept" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-mint/40"></select>
+        </div>
+        <div class="flex items-end">
+          <button onclick="runSimulation()" class="w-full bg-mint hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition">
+            <i data-lucide="play" class="w-4 h-4"></i>Run Simulation
+          </button>
+        </div>
+      </div>
+      <div class="mt-4">
+        <label class="flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" id="simNewDept" class="rounded border-slate-300 text-mint focus:ring-mint"/>
+          Evaluate adding a new overflow department
+        </label>
+      </div>
+    </div>
+    <!-- Simulation Results -->
+    <div id="simResults" class="hidden space-y-5">
+      <div class="grid grid-cols-3 gap-4" id="simKPIs"></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl border border-slate-100 p-5">
+          <h4 class="text-sm font-semibold text-slate-700 mb-3">Current vs Simulated — Wait Times</h4>
+          <div style="height:280px"><canvas id="simWaitChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-100 p-5">
+          <h4 class="text-sm font-semibold text-slate-700 mb-3">Current vs Simulated — Utilization</h4>
+          <div style="height:280px"><canvas id="simUtilChart"></canvas></div>
+        </div>
+      </div>
+      <div id="newDeptResult" class="hidden bg-white rounded-xl border border-slate-100 p-5">
+        <h4 class="text-sm font-semibold text-slate-700 mb-3">New Department Evaluation</h4>
+        <div id="newDeptContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: ALERTS & FHIR ===================== -->
+  <div id="page-alerts" class="page hidden p-6 space-y-5 fade-in">
+    <div>
+      <h3 class="text-base font-semibold text-slate-800 flex items-center gap-2">
+        <i data-lucide="bell-ring" class="w-5 h-5 text-mint"></i>Automation & Integration
+      </h3>
+      <p class="text-xs text-slate-400 mt-1">Operational alerts, escalation workflows, and FHIR integration</p>
+    </div>
+    <!-- Alert Rules -->
+    <div class="grid grid-cols-2 gap-5">
+      <div class="bg-white rounded-xl border border-slate-100 p-5">
+        <h4 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="siren" class="w-4 h-4 text-vital-rose"></i>Active Alert Rules</h4>
+        <div id="alertRules" class="space-y-3"></div>
+        <button onclick="openAlertRuleModal()" class="mt-4 text-sm text-mint hover:text-emerald-600 font-medium flex items-center gap-1">
+          <i data-lucide="plus" class="w-4 h-4"></i>Add Alert Rule
+        </button>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-100 p-5">
+        <h4 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="git-branch" class="w-4 h-4 text-vital-amber"></i>Escalation Workflow</h4>
+        <div class="space-y-4" id="escalationPipeline">
+          <div class="flex items-center gap-3 p-3 bg-mint-slate rounded-lg">
+            <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 text-xs font-bold">L1</div>
+            <div><div class="text-sm font-medium">Auto-Notify</div><div class="text-xs text-slate-400">System sends alert to charge nurse dashboard</div></div>
+          </div>
+          <div class="flex justify-center"><i data-lucide="chevron-down" class="w-4 h-4 text-slate-300"></i></div>
+          <div class="flex items-center gap-3 p-3 bg-mint-slate rounded-lg">
+            <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xs font-bold">L2</div>
+            <div><div class="text-sm font-medium">Escalate to Supervisor</div><div class="text-xs text-slate-400">If unresolved after 15 min → page department supervisor</div></div>
+          </div>
+          <div class="flex justify-center"><i data-lucide="chevron-down" class="w-4 h-4 text-slate-300"></i></div>
+          <div class="flex items-center gap-3 p-3 bg-mint-slate rounded-lg">
+            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-xs font-bold">L3</div>
+            <div><div class="text-sm font-medium">Critical Escalation</div><div class="text-xs text-slate-400">If unresolved after 30 min → notify hospital admin + CMO</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Live Alerts Feed -->
+    <div class="bg-white rounded-xl border border-slate-100 p-5">
+      <h4 class="text-sm font-semibold text-slate-700 mb-4">Live Alerts Feed</h4>
+      <div id="alertsFeed" class="space-y-2 max-h-72 overflow-y-auto"></div>
+    </div>
+    <!-- FHIR Integration -->
+    <div class="bg-white rounded-xl border border-slate-100 p-5">
+      <h4 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2"><i data-lucide="link" class="w-4 h-4 text-mint"></i>FHIR R4 Integration</h4>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="p-4 bg-mint-slate rounded-lg">
+          <div class="text-xs text-slate-500 mb-1">Endpoint</div>
+          <code class="text-xs text-slate-700">https://ehr.hospital.org/fhir/r4</code>
+          <div class="mt-2"><span class="badge bg-emerald-100 text-emerald-700">Connected</span></div>
+        </div>
+        <div class="p-4 bg-mint-slate rounded-lg">
+          <div class="text-xs text-slate-500 mb-1">Resources Mapped</div>
+          <div class="text-lg font-bold text-slate-800">4 / 6</div>
+          <div class="text-xs text-slate-400 mt-1">Patient, Encounter, Location, Observation</div>
+        </div>
+        <div class="p-4 bg-mint-slate rounded-lg">
+          <div class="text-xs text-slate-500 mb-1">Last Sync</div>
+          <div class="text-sm font-medium text-slate-700" id="fhirLastSync">—</div>
+          <button onclick="simulateFHIRSync()" class="mt-2 text-xs text-mint hover:text-emerald-600 font-medium">Run Sync Now</button>
+        </div>
+      </div>
+      <div class="mt-4 p-4 bg-slate-50 rounded-lg">
+        <div class="text-xs font-medium text-slate-600 mb-2">FHIR Resource Mapping</div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>Patient → patients.csv (patient_id, age, sex, chronic_condition)</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>Encounter → encounters.csv (encounter_id, arrival_time, outcome)</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>Location → departments.csv (department_id, bed_count)</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>DiagnosticReport → diagnostic_tests.csv (test_id, test_type)</div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-300"></span>Practitioner → <span class="text-slate-400">Not mapped</span></div>
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-300"></span>Condition → <span class="text-slate-400">Planned for Phase 5</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: REPORTS ===================== -->
+  <div id="page-reports" class="page hidden p-6 space-y-5 fade-in">
+    <div>
+      <h3 class="text-base font-semibold text-slate-800">Reports & Analytics</h3>
+      <p class="text-xs text-slate-400 mt-1">Exportable operational summaries</p>
+    </div>
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl border border-slate-100 p-5 cursor-pointer hover:border-mint transition" onclick="generateReport('operational')">
+        <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center mb-3"><i data-lucide="bar-chart-3" class="w-5 h-5 text-mint"></i></div>
+        <h4 class="text-sm font-semibold text-slate-700">Operational Summary</h4>
+        <p class="text-xs text-slate-400 mt-1">KPI overview, department loads, wait time distributions</p>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-100 p-5 cursor-pointer hover:border-mint transition" onclick="generateReport('bottleneck')">
+        <div class="w-10 h-10 rounded-lg bg-vital-rose/10 flex items-center justify-center mb-3"><i data-lucide="alert-triangle" class="w-5 h-5 text-vital-rose"></i></div>
+        <h4 class="text-sm font-semibold text-slate-700">Bottleneck Analysis</h4>
+        <p class="text-xs text-slate-400 mt-1">Overloaded departments, high-risk patients, root causes</p>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-100 p-5 cursor-pointer hover:border-mint transition" onclick="generateReport('ml')">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3"><i data-lucide="brain" class="w-5 h-5 text-blue-500"></i></div>
+        <h4 class="text-sm font-semibold text-slate-700">ML Performance</h4>
+        <p class="text-xs text-slate-400 mt-1">FlowCast model metrics, predictions accuracy, feature analysis</p>
+      </div>
+    </div>
+    <div id="reportOutput" class="hidden bg-white rounded-xl border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="text-sm font-semibold text-slate-700" id="reportTitle">Report</h4>
+        <button onclick="exportReport()" class="text-sm text-mint hover:text-emerald-600 font-medium flex items-center gap-1"><i data-lucide="download" class="w-4 h-4"></i>Export CSV</button>
+      </div>
+      <div id="reportContent"></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: SETTINGS ===================== -->
+  <div id="page-settings" class="page hidden p-6 space-y-5 fade-in">
+    <h3 class="text-base font-semibold text-slate-800">Settings</h3>
+    <div class="bg-white rounded-xl border border-slate-100 p-5 max-w-2xl space-y-4">
+      <div>
+        <label class="text-sm font-medium text-slate-700">Overload Threshold (%)</label>
+        <input type="number" id="settingOverload" value="85" class="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+        <p class="text-xs text-slate-400 mt-1">Departments above this utilization % are flagged as overloaded</p>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-slate-700">Critical Wait Threshold (min)</label>
+        <input type="number" id="settingCritWait" value="90" class="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-slate-700">Auto-refresh Interval (sec)</label>
+        <input type="number" id="settingRefresh" value="60" class="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="saveSettings()" class="bg-mint hover:bg-emerald-500 text-white text-sm font-medium px-5 py-2 rounded-lg transition">Save Settings</button>
+        <button onclick="resetLocalData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium px-5 py-2 rounded-lg transition">Reset Local Data</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===================== ADD PATIENT MODAL ===================== -->
+<div id="addPatientModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-backdrop absolute inset-0" onclick="closeAddPatientModal()"></div>
+  <div class="absolute right-0 top-0 h-full w-[420px] bg-white shadow-2xl p-6 overflow-y-auto">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-lg font-semibold">Register New Patient</h3>
+      <button onclick="closeAddPatientModal()" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div><label class="text-xs text-slate-500 mb-1 block">Age</label><input type="number" id="npAge" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="e.g. 45"/></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Sex</label><select id="npSex" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option value="M">Male</option><option value="F">Female</option></select></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Chronic Condition</label><select id="npCondition" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option>None</option><option>Cardiac</option><option>Hypertension</option><option>Asthma</option><option>Diabetes</option></select></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Department</label><select id="npDept" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"></select></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Visit Type</label><select id="npVisit" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option>Walk-in</option><option>Emergency</option><option>Scheduled</option><option>Follow-up</option></select></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Triage Level</label><select id="npTriage" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Insurance</label><select id="npInsurance" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option>Public</option><option>Private</option><option>Self-pay</option></select></div>
+      <button onclick="addPatient()" class="w-full bg-mint hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition">Register Patient</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ROOT CAUSE DRAWER ===================== -->
+<div id="rootCauseDrawer" class="fixed inset-0 z-50 hidden">
+  <div class="drawer-overlay absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeDrawer()"></div>
+  <div class="drawer-panel absolute right-0 top-0 h-full w-[500px] bg-white shadow-2xl overflow-y-auto">
+    <div class="p-6" id="drawerContent"></div>
+  </div>
+</div>
+
+<!-- ===================== ALERT RULE MODAL ===================== -->
+<div id="alertRuleModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-backdrop absolute inset-0" onclick="closeAlertRuleModal()"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] bg-white rounded-xl shadow-2xl p-6">
+    <h3 class="text-lg font-semibold mb-4">Create Alert Rule</h3>
+    <div class="space-y-4">
+      <div><label class="text-xs text-slate-500 mb-1 block">Rule Name</label><input type="text" id="arName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="e.g. ER Overcrowding Alert"/></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Condition</label><select id="arCondition" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+        <option value="utilization_above">Dept utilization above threshold</option>
+        <option value="wait_above">Patient wait time above threshold</option>
+        <option value="critical_unattended">Critical patient unattended</option>
+      </select></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Threshold</label><input type="number" id="arThreshold" value="85" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">Severity</label><select id="arSeverity" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"><option value="warning">Warning</option><option value="critical">Critical</option></select></div>
+      <div class="flex gap-3">
+        <button onclick="saveAlertRule()" class="flex-1 bg-mint hover:bg-emerald-500 text-white font-medium py-2 rounded-lg transition">Save Rule</button>
+        <button onclick="closeAlertRuleModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg transition">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden bg-sidebar-dark text-white px-5 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2 fade-in">
+  <i data-lucide="check-circle" class="w-4 h-4 text-mint"></i><span id="toastMsg"></span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════════════════
+let patients=[],encounters=[],departments=[],diagnostics=[];
+let localChanges=JSON.parse(localStorage.getItem('pulseflow_v2')||'{}');
+if(!localChanges.added) localChanges={added:[],discharged:[],alerts:[],settings:{overload:85,critWait:90,refresh:60}};
+let deptMap={},patMap={};
+let currentPage='overview';
+let patientTab='active',patPage=1,invPage=1;
+const PER_PAGE=20;
+let mlModel=null;
+let charts={};
+
+// ═══════════════════════════════════════════════════════
+// DATA LOADING
+// ═══════════════════════════════════════════════════════
+async function loadCSV(url){
+  const r=await fetch(url);const t=await r.text();
+  const lines=t.trim().split('\n');const headers=lines[0].split(',');
+  return lines.slice(1).filter(l=>l.trim()).map(l=>{
+    const vals=l.split(',');const obj={};
+    headers.forEach((h,i)=>obj[h.trim()]=vals[i]?.trim()||'');
+    return obj;
+  });
+}
+
+async function init(){
+  try{
+    [patients,encounters,departments,diagnostics]=await Promise.all([
+      loadCSV('/data/patients.csv'),loadCSV('/data/encounters.csv'),
+      loadCSV('/data/departments.csv'),loadCSV('/data/diagnostic_tests.csv')
+    ]);
+  }catch(e){
+    console.warn('CSV fetch failed, using inline fallback');
+    departments=[
+      {department_id:'D01',department_name:'Emergency',staff_count:'28',bed_count:'29',daily_capacity:'431',service_type:'Emergency'},
+      {department_id:'D02',department_name:'General Medicine',staff_count:'30',bed_count:'48',daily_capacity:'298',service_type:'Clinical'},
+      {department_id:'D03',department_name:'Pediatrics',staff_count:'16',bed_count:'11',daily_capacity:'368',service_type:'Clinical'},
+      {department_id:'D04',department_name:'Cardiology',staff_count:'25',bed_count:'22',daily_capacity:'394',service_type:'Clinical'},
+      {department_id:'D05',department_name:'Orthopedics',staff_count:'9',bed_count:'48',daily_capacity:'243',service_type:'Clinical'},
+      {department_id:'D06',department_name:'Radiology',staff_count:'7',bed_count:'54',daily_capacity:'153',service_type:'Diagnostics'},
+      {department_id:'D07',department_name:'Laboratory',staff_count:'27',bed_count:'55',daily_capacity:'156',service_type:'Diagnostics'},
+      {department_id:'D08',department_name:'Pharmacy',staff_count:'20',bed_count:'26',daily_capacity:'445',service_type:'Support'},
+      {department_id:'D09',department_name:'Surgery',staff_count:'5',bed_count:'17',daily_capacity:'181',service_type:'Clinical'},
+      {department_id:'D10',department_name:'Neurology',staff_count:'12',bed_count:'25',daily_capacity:'216',service_type:'Clinical'},
+      {department_id:'D11',department_name:'Outpatient',staff_count:'16',bed_count:'48',daily_capacity:'215',service_type:'Outpatient'},
+      {department_id:'D12',department_name:'Admissions',staff_count:'5',bed_count:'50',daily_capacity:'438',service_type:'Admin'}
+    ];
+  }
+  // Add local patients
+  localChanges.added.forEach(p=>{patients.push(p.patient);encounters.push(p.encounter)});
+  // Build maps
+  departments.forEach(d=>deptMap[d.department_id]=d);
+  patients.forEach(p=>patMap[p.patient_id]=p);
+  updateActiveSet();
+  // Populate filters
+  populateFilters();
+  // Apply settings
+  if(localChanges.settings){
+    document.getElementById('settingOverload').value=localChanges.settings.overload||85;
+    document.getElementById('settingCritWait').value=localChanges.settings.critWait||90;
+    document.getElementById('settingRefresh').value=localChanges.settings.refresh||60;
+  }
+  document.getElementById('loadingScreen').classList.add('hidden');
+  showPage('overview');
+  startClock();
+  generateAlerts();
+  lucide.createIcons();
+}
+
+function populateFilters(){
+  const opts=departments.map(d=>`<option value="${d.department_id}">${d.department_name}</option>`).join('');
+  document.getElementById('patDeptFilter').innerHTML='<option value="">All Departments</option>'+opts;
+  document.getElementById('invDeptFilter').innerHTML='<option value="">All Departments</option>'+opts;
+  document.getElementById('simDept').innerHTML='<option value="all">All Departments</option>'+opts;
+  document.getElementById('npDept').innerHTML=opts;
+}
+
+function startClock(){
+  const el=document.getElementById('clockDisplay');
+  const update=()=>{const d=new Date();el.textContent=d.toLocaleString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true})+' · '+d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})};
+  update();setInterval(update,1000);
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+const pageTitles={
+  overview:['Dashboard Overview','Real-time hospital operations intelligence'],
+  patients:['Patient Management','Active & historical patient records'],
+  departments:['Department Overview','Capacity, staffing, and utilization metrics'],
+  investigate:['Investigate First','Priority queue ranked by bottleneck risk'],
+  flowcast:['FlowCast ML Engine','Predictive analytics & delay risk modeling'],
+  simulator:['AI Simulation Lab','Capacity planning & what-if analysis'],
+  alerts:['Alerts & Integration','Automated workflows & FHIR connectivity'],
+  reports:['Reports & Analytics','Exportable operational summaries'],
+  settings:['Settings','System configuration & preferences']
+};
+
+function showPage(page){
+  currentPage=page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const el=document.getElementById('page-'+page);
+  if(el){el.classList.remove('hidden')}
+  const nav=document.getElementById('nav-'+page);
+  if(nav){nav.classList.add('active')}
+  const t=pageTitles[page]||['',''];
+  document.getElementById('pageTitle').textContent=t[0];
+  document.getElementById('pageSubtitle').textContent=t[1];
+  // Render page
+  if(page==='overview') renderOverview();
+  else if(page==='patients') renderPatients();
+  else if(page==='departments') renderDepartments();
+  else if(page==='investigate') renderInvestigate();
+  else if(page==='flowcast') renderFlowCast();
+  else if(page==='simulator') renderSimulator();
+  else if(page==='alerts') renderAlerts();
+  lucide.createIcons();
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function getDeptName(id){return deptMap[id]?.department_name||id}
+let activeEncounterIds = new Set();
+function updateActiveSet(){
+  if(!encounters||encounters.length===0)return;
+  const addedIds=new Set(localChanges.added.map(p=>p.encounter.encounter_id));
+  const admitted=encounters.filter(e=>e.outcome==='Admitted'&&!localChanges.discharged.includes(e.encounter_id));
+  admitted.sort((a,b)=>(b.arrival_time||'').localeCompare(a.arrival_time||''));
+  activeEncounterIds=new Set(admitted.slice(0,280).map(e=>e.encounter_id));
+  addedIds.forEach(id=>{
+    if(!localChanges.discharged.includes(id))activeEncounterIds.add(id);
+  });
+}
+function isActive(enc){
+  if(!enc)return false;
+  if(localChanges.discharged.includes(enc.encounter_id))return false;
+  return activeEncounterIds.has(enc.encounter_id);
+}
+function getActiveEncounters(){return encounters.filter(e=>isActive(e))}
+function getWait(enc){return parseInt(enc.wait_minutes)||0}
+function getTriageColor(t){return{Critical:'bg-red-100 text-red-700',High:'bg-orange-100 text-orange-700',Medium:'bg-yellow-100 text-yellow-700',Low:'bg-emerald-100 text-emerald-700'}[t]||'bg-slate-100 text-slate-700'}
+function getTriageWeight(t){return{Critical:40,High:25,Medium:10,Low:0}[t]||0}
+function getChronicWeight(c){return c&&c!=='None'?15:0}
+
+function calcRiskScore(enc,pat){
+  const deptEncs=encounters.filter(e=>e.department_id===enc.department_id);
+  const avgWait=deptEncs.reduce((s,e)=>s+getWait(e),0)/deptEncs.length;
+  const waitDev=Math.max(0,getWait(enc)-avgWait);
+  const diagTests=diagnostics.filter(d=>d.encounter_id===enc.encounter_id);
+  const diagPenalty=diagTests.length>0?diagTests.reduce((s,d)=>{
+    const req=new Date(d.requested_time);const comp=new Date(d.completion_time);
+    const tat=(comp-req)/60000;return s+(tat>60?20:tat>30?10:0);
+  },0):0;
+  const dept=deptMap[enc.department_id];
+  const activeInDept=getActiveEncounters().filter(e=>e.department_id===enc.department_id).length;
+  const util=dept?(activeInDept/parseInt(dept.bed_count))*100:0;
+  const overloadBonus=util>85?20:util>70?10:0;
+  const triageW=getTriageWeight(enc.triage_level);
+  const chronicW=pat?getChronicWeight(pat.chronic_condition):0;
+  return Math.round(waitDev+diagPenalty+overloadBonus+triageW+chronicW);
+}
+
+function getRootCauses(enc,pat,score){
+  const causes=[];
+  const dept=deptMap[enc.department_id];
+  const deptEncs=encounters.filter(e=>e.department_id===enc.department_id);
+  const avgWait=deptEncs.reduce((s,e)=>s+getWait(e),0)/deptEncs.length;
+  if(getWait(enc)>avgWait*1.3)causes.push({type:'wait',desc:`Wait time ${getWait(enc)} min exceeds dept avg ${Math.round(avgWait)} min by ${Math.round(((getWait(enc)/avgWait)-1)*100)}%`});
+  const activeInDept=getActiveEncounters().filter(e=>e.department_id===enc.department_id).length;
+  const util=dept?(activeInDept/parseInt(dept.bed_count))*100:0;
+  if(util>85)causes.push({type:'overload',desc:`${getDeptName(enc.department_id)} at ${Math.round(util)}% utilization (${activeInDept}/${dept.bed_count} beds)`});
+  const diagTests=diagnostics.filter(d=>d.encounter_id===enc.encounter_id);
+  diagTests.forEach(d=>{const tat=(new Date(d.completion_time)-new Date(d.requested_time))/60000;if(tat>60)causes.push({type:'diag',desc:`${d.test_type} turnaround: ${Math.round(tat)} min (priority: ${d.priority})`})});
+  if(pat?.chronic_condition&&pat.chronic_condition!=='None')causes.push({type:'chronic',desc:`Chronic condition: ${pat.chronic_condition} — increased monitoring required`});
+  if(enc.triage_level==='Critical'||enc.triage_level==='High')causes.push({type:'triage',desc:`Triage level: ${enc.triage_level} — priority clinical attention needed`});
+  if(!causes.length)causes.push({type:'info',desc:'No significant bottleneck factors detected'});
+  return causes;
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.remove('hidden');
+  setTimeout(()=>t.classList.add('hidden'),3000);
+}
+
+function saveLocal(){localStorage.setItem('pulseflow_v2',JSON.stringify(localChanges))}
+
+// ═══════════════════════════════════════════════════════
+// OVERVIEW PAGE
+// ═══════════════════════════════════════════════════════
+function renderOverview(){
+  const active=getActiveEncounters();
+  const totalBeds=departments.reduce((s,d)=>s+parseInt(d.bed_count),0);
+  const occupiedBeds=active.length;
+  const occupancy=Math.round((occupiedBeds/totalBeds)*100);
+  const avgWait=Math.round(active.reduce((s,e)=>s+getWait(e),0)/Math.max(active.length,1));
+  const critCount=active.filter(e=>e.triage_level==='Critical'||e.triage_level==='High').length;
+  const overloadedDepts=departments.filter(d=>{
+    const ac=active.filter(e=>e.department_id===d.department_id).length;
+    return(ac/parseInt(d.bed_count)*100)>(localChanges.settings?.overload||85);
+  }).length;
+
+  document.getElementById('kpiRow').innerHTML=`
+    ${kpiCard('Bed Occupancy',`${occupancy}%`,`${occupiedBeds} / ${totalBeds} beds`,occupancy>85?'vital-rose':occupancy>70?'vital-amber':'mint','bed-double',occupancy)}
+    ${kpiCard('Avg Wait Time',`${avgWait} min`,active.length+' active patients',avgWait>60?'vital-rose':avgWait>40?'vital-amber':'mint','clock')}
+    ${kpiCard('Critical Patients',critCount,'Require immediate attention',critCount>10?'vital-rose':'vital-amber','alert-triangle')}
+    ${kpiCard('Overloaded Depts',overloadedDepts+' / '+departments.length,'Above '+((localChanges.settings?.overload||85))+'% threshold',overloadedDepts>3?'vital-rose':'mint','building-2')}
+  `;
+  renderAdmissionsChart();
+  renderVisitTypeChart();
+  renderHeatmap();
+  renderRecentActivity();
+  lucide.createIcons();
+}
+
+function kpiCard(label,value,sub,color,icon,progress){
+  return`<div class="kpi-card bg-white rounded-xl border border-slate-100 p-5">
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-xs text-slate-400 font-medium uppercase tracking-wider">${label}</span>
+      <div class="w-8 h-8 rounded-lg bg-${color}/10 flex items-center justify-center"><i data-lucide="${icon}" class="w-4 h-4 text-${color}"></i></div>
+    </div>
+    <div class="text-2xl font-bold text-slate-800">${value}</div>
+    <div class="text-xs text-slate-400 mt-1">${sub}</div>
+    ${progress!==undefined?`<div class="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-${color} rounded-full progress-bar" style="width:${Math.min(progress,100)}%"></div></div>`:''}
+  </div>`;
+}
+
+function renderAdmissionsChart(){
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const admissions=new Array(12).fill(0),discharges=new Array(12).fill(0);
+  encounters.forEach(e=>{
+    const m=new Date(e.arrival_time).getMonth();
+    if(!isNaN(m)){
+      if(e.outcome==='Admitted')admissions[m]++;
+      else discharges[m]++;
+    }
+  });
+  if(charts.admissions)charts.admissions.destroy();
+  charts.admissions=new Chart(document.getElementById('admissionsChart'),{
+    type:'line',data:{labels:months,datasets:[
+      {label:'Admissions',data:admissions,borderColor:'#00F090',backgroundColor:'rgba(0,240,144,.1)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#00F090'},
+      {label:'Discharges',data:discharges,borderColor:'#94a3b8',backgroundColor:'rgba(148,163,184,.1)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#94a3b8'}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11,family:'Inter'},usePointStyle:true,pointStyle:'circle'}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'},beginAtZero:true}}}
+  });
+}
+
+function renderVisitTypeChart(){
+  const types={};encounters.forEach(e=>{types[e.visit_type]=(types[e.visit_type]||0)+1});
+  if(charts.visitType)charts.visitType.destroy();
+  charts.visitType=new Chart(document.getElementById('visitTypeChart'),{
+    type:'doughnut',data:{labels:Object.keys(types),datasets:[{data:Object.values(types),backgroundColor:['#00F090','#38bdf8','#f59e0b','#ef4444','#8b5cf6'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11,family:'Inter'},padding:12,usePointStyle:true,pointStyle:'circle'}}}}
+  });
+}
+
+function renderHeatmap(){
+  const active=getActiveEncounters();
+  document.getElementById('deptHeatmap').innerHTML=departments.map(d=>{
+    const ac=active.filter(e=>e.department_id===d.department_id).length;
+    const util=Math.round((ac/parseInt(d.bed_count))*100);
+    const color=util>85?'border-vital-rose bg-red-50':util>70?'border-vital-amber bg-amber-50':'border-emerald-200 bg-emerald-50';
+    const badge=util>85?'bg-red-100 text-red-700':util>70?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700';
+    return`<div class="rounded-lg border ${color} p-3 cursor-pointer hover:shadow-md transition" onclick="showPage('departments')">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-slate-700">${d.department_name}</span>
+        <span class="badge ${badge}">${util}%</span>
+      </div>
+      <div class="h-1.5 bg-white rounded-full overflow-hidden"><div class="h-full rounded-full progress-bar ${util>85?'bg-vital-rose':util>70?'bg-vital-amber':'bg-mint'}" style="width:${Math.min(util,100)}%"></div></div>
+      <div class="text-[10px] text-slate-400 mt-1.5">${ac} active · ${d.bed_count} beds · ${d.staff_count} staff</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRecentActivity(){
+  const recent=encounters.slice(-50).reverse().slice(0,10);
+  document.getElementById('recentActivity').innerHTML=recent.map(e=>{
+    const icon=e.outcome==='Admitted'?'log-in':'log-out';
+    const color=e.outcome==='Admitted'?'text-mint':'text-slate-400';
+    return`<div class="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50">
+      <i data-lucide="${icon}" class="w-4 h-4 mt-0.5 ${color}"></i>
+      <div>
+        <div class="text-xs font-medium text-slate-700">${e.patient_id} → ${getDeptName(e.department_id)}</div>
+        <div class="text-[10px] text-slate-400">${e.visit_type} · ${e.triage_level} · ${new Date(e.arrival_time).toLocaleDateString()}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// PATIENTS PAGE
+// ═══════════════════════════════════════════════════════
+function setPatientTab(tab){
+  patientTab=tab;patPage=1;
+  document.querySelectorAll('[id^="ptab-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ptab-'+tab).classList.add('active');
+  renderPatients();
+}
+
+function renderPatients(){
+  const deptFilter=document.getElementById('patDeptFilter').value;
+  let list=encounters.map(e=>({enc:e,pat:patMap[e.patient_id]||{}}));
+  if(patientTab==='active')list=list.filter(r=>isActive(r.enc));
+  else if(patientTab==='discharged')list=list.filter(r=>!isActive(r.enc));
+  if(deptFilter)list=list.filter(r=>r.enc.department_id===deptFilter);
+  const total=list.length;
+  const pages=Math.ceil(total/PER_PAGE);
+  patPage=Math.min(patPage,Math.max(pages,1));
+  const slice=list.slice((patPage-1)*PER_PAGE,patPage*PER_PAGE);
+  document.getElementById('patientsTableBody').innerHTML=slice.map(r=>{
+    const e=r.enc,p=r.pat;
+    const active=isActive(e);
+    return`<tr class="table-row border-t border-slate-50">
+      <td class="px-4 py-3 font-medium text-slate-800">${e.patient_id}</td>
+      <td class="px-4 py-3 text-slate-600">${p.age||'—'} / ${p.sex||'—'}</td>
+      <td class="px-4 py-3 text-slate-600">${p.chronic_condition||'—'}</td>
+      <td class="px-4 py-3 text-slate-600">${getDeptName(e.department_id)}</td>
+      <td class="px-4 py-3"><span class="badge bg-blue-50 text-blue-600">${e.visit_type}</span></td>
+      <td class="px-4 py-3"><span class="badge ${getTriageColor(e.triage_level)}">${e.triage_level}</span></td>
+      <td class="px-4 py-3 text-slate-600">${e.wait_minutes}</td>
+      <td class="px-4 py-3"><span class="badge ${active?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${active?'Active':'Discharged'}</span></td>
+      <td class="px-4 py-3">${active?`<button onclick="dischargePatient('${e.encounter_id}')" class="text-xs text-vital-rose hover:underline">Discharge</button>`:'—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('patientCount').textContent=`Showing ${slice.length} of ${total} records`;
+  renderPagination('patientPagination',pages,patPage,p=>{patPage=p;renderPatients()});
+  lucide.createIcons();
+}
+
+function renderPagination(containerId,pages,current,cb){
+  if(pages<=1){document.getElementById(containerId).innerHTML='';return}
+  let html='';
+  if(current>1)html+=`<button onclick="arguments[0].stopPropagation()" class="px-3 py-1 rounded border border-slate-200 hover:bg-slate-50 text-xs" id="${containerId}_prev">Prev</button>`;
+  const start=Math.max(1,current-2),end=Math.min(pages,current+2);
+  for(let i=start;i<=end;i++){
+    html+=`<button class="px-3 py-1 rounded border text-xs ${i===current?'bg-mint text-white border-mint':'border-slate-200 hover:bg-slate-50'}" id="${containerId}_${i}">${i}</button>`;
+  }
+  if(current<pages)html+=`<button class="px-3 py-1 rounded border border-slate-200 hover:bg-slate-50 text-xs" id="${containerId}_next">Next</button>`;
+  document.getElementById(containerId).innerHTML=html;
+  // Bind
+  for(let i=start;i<=end;i++){
+    document.getElementById(`${containerId}_${i}`)?.addEventListener('click',()=>cb(i));
+  }
+  document.getElementById(`${containerId}_prev`)?.addEventListener('click',()=>cb(current-1));
+  document.getElementById(`${containerId}_next`)?.addEventListener('click',()=>cb(current+1));
+}
+
+function openAddPatientModal(){document.getElementById('addPatientModal').classList.remove('hidden')}
+function closeAddPatientModal(){document.getElementById('addPatientModal').classList.add('hidden')}
+
+function addPatient(){
+  const id='P'+String(patients.length+1).padStart(5,'0');
+  const eid='E'+String(encounters.length+1).padStart(6,'0');
+  const now=new Date().toISOString().replace('T',' ').substring(0,19);
+  const pat={patient_id:id,age:document.getElementById('npAge').value,sex:document.getElementById('npSex').value,chronic_condition:document.getElementById('npCondition').value,home_area:'LOCAL',insurance_type:document.getElementById('npInsurance').value};
+  const enc={encounter_id:eid,patient_id:id,arrival_time:now,department_id:document.getElementById('npDept').value,visit_type:document.getElementById('npVisit').value,triage_level:document.getElementById('npTriage').value,outcome:'Admitted',service_start_time:'',service_end_time:'',wait_minutes:String(Math.floor(Math.random()*40+10)),service_minutes:'0',discharge_time:''};
+  patients.push(pat);encounters.push(enc);patMap[id]=pat;
+  localChanges.added.push({patient:pat,encounter:enc});saveLocal();
+  updateActiveSet();
+  closeAddPatientModal();renderPatients();showToast(`Patient ${id} registered successfully`);
+}
+
+function dischargePatient(eid){
+  localChanges.discharged.push(eid);saveLocal();
+  updateActiveSet();
+  renderPatients();showToast(`Patient discharged`);
+}
+
+// ═══════════════════════════════════════════════════════
+// DEPARTMENTS PAGE
+// ═══════════════════════════════════════════════════════
+function renderDepartments(){
+  const active=getActiveEncounters();
+  const threshold=localChanges.settings?.overload||85;
+  // KPIs
+  const totalStaff=departments.reduce((s,d)=>s+parseInt(d.staff_count),0);
+  const totalBeds=departments.reduce((s,d)=>s+parseInt(d.bed_count),0);
+  const overloaded=departments.filter(d=>{const ac=active.filter(e=>e.department_id===d.department_id).length;return(ac/parseInt(d.bed_count)*100)>threshold}).length;
+  const avgUtil=Math.round(departments.reduce((s,d)=>{const ac=active.filter(e=>e.department_id===d.department_id).length;return s+(ac/parseInt(d.bed_count)*100)},0)/departments.length);
+  document.getElementById('deptKPIs').innerHTML=`
+    ${kpiCard('Total Staff',totalStaff,'Across '+departments.length+' departments','mint','users')}
+    ${kpiCard('Total Beds',totalBeds,active.length+' occupied','mint','bed-double')}
+    ${kpiCard('Avg Utilization',avgUtil+'%','Threshold: '+threshold+'%',avgUtil>threshold?'vital-rose':'mint','gauge')}
+    ${kpiCard('Overloaded',overloaded,overloaded>0?'Departments need attention':'All normal',overloaded>0?'vital-rose':'mint','alert-triangle')}
+  `;
+  // Table
+  document.getElementById('deptTableBody').innerHTML=departments.map(d=>{
+    const ac=active.filter(e=>e.department_id===d.department_id).length;
+    const util=Math.round((ac/parseInt(d.bed_count))*100);
+    const deptEncs=encounters.filter(e=>e.department_id===d.department_id);
+    const avgWait=Math.round(deptEncs.reduce((s,e)=>s+getWait(e),0)/Math.max(deptEncs.length,1));
+    const statusBadge=util>threshold?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700';
+    const statusText=util>threshold?'Overloaded':'Normal';
+    return`<tr class="table-row border-t border-slate-50">
+      <td class="px-4 py-3 font-medium text-slate-800">${d.department_name}</td>
+      <td class="px-4 py-3"><span class="badge bg-slate-100 text-slate-600">${d.service_type}</span></td>
+      <td class="px-4 py-3 text-slate-600">${d.staff_count}</td>
+      <td class="px-4 py-3 text-slate-600">${d.bed_count}</td>
+      <td class="px-4 py-3 text-slate-600">${d.daily_capacity}</td>
+      <td class="px-4 py-3 font-medium">${ac}</td>
+      <td class="px-4 py-3">
+        <div class="flex items-center gap-2">
+          <div class="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full ${util>threshold?'bg-vital-rose':'bg-mint'}" style="width:${Math.min(util,100)}%"></div></div>
+          <span class="text-xs font-medium">${util}%</span>
+        </div>
+      </td>
+      <td class="px-4 py-3 text-slate-600">${avgWait} min</td>
+      <td class="px-4 py-3"><span class="badge ${statusBadge}">${statusText}</span></td>
+    </tr>`;
+  }).join('');
+  // Chart
+  renderDeptCompareChart();
+  lucide.createIcons();
+}
+
+function renderDeptCompareChart(){
+  const active=getActiveEncounters();
+  const labels=departments.map(d=>d.department_name);
+  const utilData=departments.map(d=>{const ac=active.filter(e=>e.department_id===d.department_id).length;return Math.round((ac/parseInt(d.bed_count))*100)});
+  const waitData=departments.map(d=>{const encs=encounters.filter(e=>e.department_id===d.department_id);return Math.round(encs.reduce((s,e)=>s+getWait(e),0)/Math.max(encs.length,1))});
+  if(charts.deptCompare)charts.deptCompare.destroy();
+  charts.deptCompare=new Chart(document.getElementById('deptCompareChart'),{
+    type:'bar',data:{labels,datasets:[
+      {label:'Utilization %',data:utilData,backgroundColor:'rgba(0,240,144,.6)',borderRadius:4},
+      {label:'Avg Wait (min)',data:waitData,backgroundColor:'rgba(56,189,248,.6)',borderRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11,family:'Inter'},usePointStyle:true}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'},beginAtZero:true}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// INVESTIGATE FIRST
+// ═══════════════════════════════════════════════════════
+function renderInvestigate(){
+  const triageFilter=document.getElementById('invTriageFilter').value;
+  const deptFilter=document.getElementById('invDeptFilter').value;
+  let list=getActiveEncounters().map(e=>{
+    const pat=patMap[e.patient_id];
+    return{enc:e,pat,score:calcRiskScore(e,pat)};
+  }).sort((a,b)=>b.score-a.score);
+  if(triageFilter)list=list.filter(r=>r.enc.triage_level===triageFilter);
+  if(deptFilter)list=list.filter(r=>r.enc.department_id===deptFilter);
+  const total=list.length;
+  const pages=Math.ceil(total/PER_PAGE);
+  invPage=Math.min(invPage,Math.max(pages,1));
+  const slice=list.slice((invPage-1)*PER_PAGE,invPage*PER_PAGE);
+  document.getElementById('investigateTableBody').innerHTML=slice.map((r,i)=>{
+    const rank=(invPage-1)*PER_PAGE+i+1;
+    const causes=getRootCauses(r.enc,r.pat,r.score);
+    const topCause=causes[0]?.desc||'—';
+    const scoreColor=r.score>60?'text-red-600 bg-red-50':r.score>30?'text-amber-600 bg-amber-50':'text-emerald-600 bg-emerald-50';
+    return`<tr class="table-row border-t border-slate-50">
+      <td class="px-4 py-3 font-bold text-slate-400">#${rank}</td>
+      <td class="px-4 py-3 font-medium text-slate-800">${r.enc.patient_id}</td>
+      <td class="px-4 py-3 text-slate-600">${getDeptName(r.enc.department_id)}</td>
+      <td class="px-4 py-3"><span class="badge ${getTriageColor(r.enc.triage_level)}">${r.enc.triage_level}</span></td>
+      <td class="px-4 py-3 text-slate-600">${r.enc.wait_minutes} min</td>
+      <td class="px-4 py-3"><span class="badge ${scoreColor} font-bold">${r.score}</span></td>
+      <td class="px-4 py-3 text-xs text-slate-500 max-w-48 truncate" title="${topCause}">${topCause}</td>
+      <td class="px-4 py-3"><button onclick="openRootCauseDrawer('${r.enc.encounter_id}')" class="text-xs text-mint hover:text-emerald-600 font-medium">Investigate</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('invCount').textContent=`${total} patients in queue`;
+  renderPagination('invPagination',pages,invPage,p=>{invPage=p;renderInvestigate()});
+}
+
+function openRootCauseDrawer(eid){
+  const enc=encounters.find(e=>e.encounter_id===eid);
+  if(!enc)return;
+  const pat=patMap[enc.patient_id]||{};
+  const score=calcRiskScore(enc,pat);
+  const causes=getRootCauses(enc,pat,score);
+  const scoreColor=score>60?'text-red-600':score>30?'text-amber-600':'text-emerald-600';
+  const diagTests=diagnostics.filter(d=>d.encounter_id===eid);
+  document.getElementById('drawerContent').innerHTML=`
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-lg font-semibold">Root Cause Analysis</h3>
+      <button onclick="closeDrawer()" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="space-y-5">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-mint-slate rounded-lg p-3"><div class="text-[10px] text-slate-400 uppercase">Patient</div><div class="text-sm font-semibold">${enc.patient_id}</div></div>
+        <div class="bg-mint-slate rounded-lg p-3"><div class="text-[10px] text-slate-400 uppercase">Risk Score</div><div class="text-xl font-bold ${scoreColor}">${score}</div></div>
+        <div class="bg-mint-slate rounded-lg p-3"><div class="text-[10px] text-slate-400 uppercase">Department</div><div class="text-sm font-semibold">${getDeptName(enc.department_id)}</div></div>
+        <div class="bg-mint-slate rounded-lg p-3"><div class="text-[10px] text-slate-400 uppercase">Wait Time</div><div class="text-sm font-semibold">${enc.wait_minutes} min</div></div>
+        <div class="bg-mint-slate rounded-lg p-3"><div class="text-[10px] text-slate-400 uppercase">Triage</div><div class="text-sm"><span class="badge ${getTriageColor(enc.triage_level)}">${enc.triage_level}</span></div></div>
+        <div class="bg-mint-slate rounded-lg p-3"><div class="text-[10px] text-slate-400 uppercase">Age / Sex</div><div class="text-sm font-semibold">${pat.age||'—'} / ${pat.sex||'—'}</div></div>
+      </div>
+      <div>
+        <h4 class="text-sm font-semibold text-slate-700 mb-3">Score Breakdown</h4>
+        <div class="text-xs bg-slate-50 rounded-lg p-3 font-mono text-slate-600">
+          Score = (Wait − DeptAvg) + DiagPenalty + OverloadBonus + TriageWeight + ChronicWeight<br/>
+          = Σ components → <strong class="${scoreColor}">${score}</strong>
+        </div>
+      </div>
+      <div>
+        <h4 class="text-sm font-semibold text-slate-700 mb-3">Root Causes</h4>
+        <div class="space-y-2">${causes.map(c=>{
+          const icon={wait:'clock',overload:'building-2',diag:'flask-conical',chronic:'heart-pulse',triage:'alert-triangle',info:'info'}[c.type]||'info';
+          const color={wait:'text-amber-500',overload:'text-red-500',diag:'text-blue-500',chronic:'text-purple-500',triage:'text-orange-500',info:'text-slate-400'}[c.type];
+          return`<div class="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
+            <i data-lucide="${icon}" class="w-4 h-4 mt-0.5 ${color}"></i>
+            <span class="text-xs text-slate-600">${c.desc}</span>
+          </div>`;
+        }).join('')}</div>
+      </div>
+      ${diagTests.length?`<div>
+        <h4 class="text-sm font-semibold text-slate-700 mb-3">Diagnostic Tests</h4>
+        <div class="space-y-1">${diagTests.map(d=>{
+          const tat=Math.round((new Date(d.completion_time)-new Date(d.requested_time))/60000);
+          return`<div class="flex items-center justify-between text-xs p-2 bg-slate-50 rounded">
+            <span class="font-medium">${d.test_type}</span>
+            <span class="text-slate-400">${tat} min TAT · ${d.priority}</span>
+          </div>`;
+        }).join('')}</div>
+      </div>`:''}
+      <div>
+        <h4 class="text-sm font-semibold text-slate-700 mb-3">Journey Timeline</h4>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3 text-xs"><div class="w-2 h-2 rounded-full bg-mint"></div><span class="text-slate-400">Arrival:</span><span>${enc.arrival_time}</span></div>
+          ${enc.service_start_time?`<div class="flex items-center gap-3 text-xs"><div class="w-2 h-2 rounded-full bg-blue-400"></div><span class="text-slate-400">Service Start:</span><span>${enc.service_start_time}</span></div>`:''}
+          ${enc.service_end_time?`<div class="flex items-center gap-3 text-xs"><div class="w-2 h-2 rounded-full bg-amber-400"></div><span class="text-slate-400">Service End:</span><span>${enc.service_end_time}</span></div>`:''}
+          ${enc.discharge_time?`<div class="flex items-center gap-3 text-xs"><div class="w-2 h-2 rounded-full bg-slate-400"></div><span class="text-slate-400">Discharge:</span><span>${enc.discharge_time}</span></div>`:''}
+        </div>
+      </div>
+      <button onclick="escalatePatient('${enc.encounter_id}')" class="w-full bg-vital-rose hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+        <i data-lucide="siren" class="w-4 h-4"></i>Escalate to Supervisor
+      </button>
+    </div>`;
+  document.getElementById('rootCauseDrawer').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeDrawer(){document.getElementById('rootCauseDrawer').classList.add('hidden')}
+
+function escalatePatient(eid){
+  showToast(`Escalation dispatched for ${eid}`);closeDrawer();
+}
+
+// ═══════════════════════════════════════════════════════
+// FLOWCAST ML ENGINE (Phase 2)
+// ═══════════════════════════════════════════════════════
+function renderFlowCast(){
+  if(mlModel){
+    document.getElementById('mlStatus').classList.add('hidden');
+    document.getElementById('mlResults').classList.remove('hidden');
+  }
+}
+
+function trainModel(){
+  const btn=document.getElementById('trainBtn');
+  btn.innerHTML='<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>Training...';
+  btn.disabled=true;
+
+  setTimeout(()=>{
+    // ── Feature engineering on encounter data ──
+    const features=[],labels=[];
+    const deptAvgWait={};
+    departments.forEach(d=>{
+      const de=encounters.filter(e=>e.department_id===d.department_id);
+      deptAvgWait[d.department_id]=de.reduce((s,e)=>s+getWait(e),0)/Math.max(de.length,1);
+    });
+
+    const trainingData=encounters.filter(e=>e.wait_minutes&&e.service_minutes);
+    trainingData.forEach(e=>{
+      const pat=patMap[e.patient_id]||{};
+      const hour=new Date(e.arrival_time).getHours();
+      const dayOfWeek=new Date(e.arrival_time).getDay();
+      features.push([
+        parseInt(e.department_id.replace('D','')),
+        {Critical:4,High:3,Medium:2,Low:1}[e.triage_level]||1,
+        {Emergency:4,'Walk-in':3,Scheduled:2,'Follow-up':1}[e.visit_type]||1,
+        parseInt(pat.age)||40,
+        pat.chronic_condition&&pat.chronic_condition!=='None'?1:0,
+        hour,dayOfWeek,
+        deptAvgWait[e.department_id]||50,
+        parseInt(deptMap[e.department_id]?.staff_count)||10,
+        parseInt(deptMap[e.department_id]?.bed_count)||30
+      ]);
+      labels.push(getWait(e));
+    });
+
+    // ── Simple Gradient Boosted Trees (JS implementation) ──
+    // Using ensemble of decision stumps for real predictions
+    const n=features.length;
+    const trainSize=Math.floor(n*0.8);
+    const trainX=features.slice(0,trainSize),trainY=labels.slice(0,trainSize);
+    const testX=features.slice(trainSize),testY=labels.slice(trainSize);
+
+    // Build ensemble of 50 decision stumps
+    const trees=[];
+    let residuals=[...trainY];
+    const lr=0.1;
+    const numTrees=50;
+    const predictions=new Array(trainSize).fill(0);
+
+    for(let t=0;t<numTrees;t++){
+      // Find best split across features
+      let bestFeat=0,bestThresh=0,bestLeftMean=0,bestRightMean=0,bestLoss=Infinity;
+      for(let f=0;f<trainX[0].length;f++){
+        const vals=[...new Set(trainX.map(x=>x[f]))].sort((a,b)=>a-b);
+        for(let v=0;v<Math.min(vals.length-1,10);v++){
+          const thresh=(vals[v]+vals[v+1])/2;
+          let leftSum=0,leftCount=0,rightSum=0,rightCount=0;
+          for(let i=0;i<trainSize;i++){
+            if(trainX[i][f]<=thresh){leftSum+=residuals[i];leftCount++}
+            else{rightSum+=residuals[i];rightCount++}
+          }
+          if(!leftCount||!rightCount)continue;
+          const leftMean=leftSum/leftCount,rightMean=rightSum/rightCount;
+          let loss=0;
+          for(let i=0;i<trainSize;i++){
+            const pred=trainX[i][f]<=thresh?leftMean:rightMean;
+            loss+=(residuals[i]-pred)**2;
+          }
+          if(loss<bestLoss){bestLoss=loss;bestFeat=f;bestThresh=thresh;bestLeftMean=leftMean;bestRightMean=rightMean}
+        }
+      }
+      trees.push({feat:bestFeat,thresh:bestThresh,left:bestLeftMean*lr,right:bestRightMean*lr});
+      // Update residuals
+      for(let i=0;i<trainSize;i++){
+        const pred=trainX[i][bestFeat]<=bestThresh?bestLeftMean*lr:bestRightMean*lr;
+        predictions[i]+=pred;
+        residuals[i]=trainY[i]-predictions[i];
+      }
+    }
+
+    // Predict function
+    function predict(x){
+      let pred=0;
+      trees.forEach(t=>{pred+=x[t.feat]<=t.thresh?t.left:t.right});
+      return Math.max(0,Math.round(pred));
+    }
+
+    // Evaluate on test set
+    const testPreds=testX.map(x=>predict(x));
+    let maeSum=0,mseSum=0,ssRes=0,ssTot=0;
+    const meanY=testY.reduce((a,b)=>a+b,0)/testY.length;
+    for(let i=0;i<testY.length;i++){
+      maeSum+=Math.abs(testY[i]-testPreds[i]);
+      mseSum+=(testY[i]-testPreds[i])**2;
+      ssRes+=(testY[i]-testPreds[i])**2;
+      ssTot+=(testY[i]-meanY)**2;
+    }
+    const mae=maeSum/testY.length;
+    const rmse=Math.sqrt(mseSum/testY.length);
+    const r2=1-ssRes/ssTot;
+
+    // Feature importance (by frequency of selection)
+    const featNames=['Department','Triage Level','Visit Type','Age','Chronic Cond.','Hour','Day of Week','Dept Avg Wait','Staff Count','Bed Count'];
+    const featImportance=new Array(10).fill(0);
+    trees.forEach(t=>featImportance[t.feat]++);
+    const maxImp=Math.max(...featImportance);
+    const normImportance=featImportance.map(v=>Math.round((v/maxImp)*100));
+
+    mlModel={trees,predict,metrics:{mae:mae.toFixed(1),rmse:rmse.toFixed(1),r2:r2.toFixed(3),trainSize,testSize:testY.length},featNames,normImportance,testY:testY.slice(0,100),testPreds:testPreds.slice(0,100)};
+
+    // Render results
+    document.getElementById('mlStatus').classList.add('hidden');
+    document.getElementById('mlResults').classList.remove('hidden');
+
+    document.getElementById('mlKPIs').innerHTML=`
+      ${kpiCard('MAE',mlModel.metrics.mae+' min','Mean Absolute Error','mint','target')}
+      ${kpiCard('RMSE',mlModel.metrics.rmse+' min','Root Mean Squared Error','mint','trending-up')}
+      ${kpiCard('R² Score',mlModel.metrics.r2,'Coefficient of Determination',parseFloat(mlModel.metrics.r2)>.5?'mint':'vital-amber','bar-chart-3')}
+      ${kpiCard('Training Split',mlModel.metrics.trainSize+' / '+mlModel.metrics.testSize,'Train / Test samples','mint','split')}
+    `;
+
+    // Feature Importance Chart
+    if(charts.feature)charts.feature.destroy();
+    charts.feature=new Chart(document.getElementById('featureChart'),{
+      type:'bar',data:{labels:featNames,datasets:[{label:'Importance',data:normImportance,backgroundColor:'rgba(0,240,144,.6)',borderRadius:4}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f1f5f9'},max:100},y:{grid:{display:false}}}}
+    });
+
+    // Pred vs Actual scatter
+    if(charts.predVsActual)charts.predVsActual.destroy();
+    const scatterData=mlModel.testY.map((y,i)=>({x:y,y:mlModel.testPreds[i]}));
+    charts.predVsActual=new Chart(document.getElementById('predVsActualChart'),{
+      type:'scatter',data:{datasets:[
+        {label:'Predictions',data:scatterData,backgroundColor:'rgba(0,240,144,.4)',pointRadius:3},
+        {label:'Perfect Fit',data:[{x:0,y:0},{x:Math.max(...mlModel.testY),y:Math.max(...mlModel.testY)}],type:'line',borderColor:'#94a3b8',borderDash:[5,5],pointRadius:0,borderWidth:1}
+      ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11,family:'Inter'},usePointStyle:true}}},scales:{x:{title:{display:true,text:'Actual Wait (min)'},grid:{color:'#f1f5f9'}},y:{title:{display:true,text:'Predicted Wait (min)'},grid:{color:'#f1f5f9'}}}}
+    });
+
+    // Predictions table for active patients
+    const activePreds=getActiveEncounters().slice(0,50).map(e=>{
+      const pat=patMap[e.patient_id]||{};
+      const hour=new Date(e.arrival_time).getHours();
+      const dow=new Date(e.arrival_time).getDay();
+      const x=[parseInt(e.department_id.replace('D','')),{Critical:4,High:3,Medium:2,Low:1}[e.triage_level]||1,{Emergency:4,'Walk-in':3,Scheduled:2,'Follow-up':1}[e.visit_type]||1,parseInt(pat.age)||40,pat.chronic_condition&&pat.chronic_condition!=='None'?1:0,hour,dow,deptAvgWait[e.department_id]||50,parseInt(deptMap[e.department_id]?.staff_count)||10,parseInt(deptMap[e.department_id]?.bed_count)||30];
+      const pred=predict(x);
+      const actual=getWait(e);
+      const risk=pred>80?'High':pred>50?'Medium':'Low';
+      const confidence=Math.max(50,Math.min(95,Math.round(100-Math.abs(pred-actual)/actual*100)));
+      return{enc:e,pat,pred,risk,confidence};
+    });
+
+    document.getElementById('predTableBody').innerHTML=activePreds.map(r=>{
+      const riskColor={High:'bg-red-100 text-red-700',Medium:'bg-amber-100 text-amber-700',Low:'bg-emerald-100 text-emerald-700'}[r.risk];
+      return`<tr class="table-row border-t border-slate-50">
+        <td class="px-4 py-3 font-medium">${r.enc.patient_id}</td>
+        <td class="px-4 py-3 text-slate-600">${getDeptName(r.enc.department_id)}</td>
+        <td class="px-4 py-3"><span class="badge ${getTriageColor(r.enc.triage_level)}">${r.enc.triage_level}</span></td>
+        <td class="px-4 py-3 text-slate-600">${r.enc.wait_minutes} min</td>
+        <td class="px-4 py-3 font-semibold text-mint">${r.pred} min</td>
+        <td class="px-4 py-3"><span class="badge ${riskColor}">${r.risk}</span></td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="w-16 h-1.5 bg-slate-100 rounded-full"><div class="h-full bg-mint rounded-full" style="width:${r.confidence}%"></div></div>
+            <span class="text-xs text-slate-500">${r.confidence}%</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    btn.innerHTML='<i data-lucide="check" class="w-4 h-4"></i>Model Trained';
+    btn.disabled=false;
+    lucide.createIcons();
+    showToast('FlowCast model trained successfully');
+  },1500);
+}
+
+// ═══════════════════════════════════════════════════════
+// SIMULATOR (Phase 3)
+// ═══════════════════════════════════════════════════════
+function renderSimulator(){
+  // AI recommendations
+  const active=getActiveEncounters();
+  const threshold=localChanges.settings?.overload||85;
+  const overloadedDepts=departments.filter(d=>{const ac=active.filter(e=>e.department_id===d.department_id).length;return(ac/parseInt(d.bed_count)*100)>threshold});
+  const recs=[];
+  overloadedDepts.forEach(d=>{
+    const ac=active.filter(e=>e.department_id===d.department_id).length;
+    const util=Math.round((ac/parseInt(d.bed_count))*100);
+    const neededBeds=Math.ceil(ac-parseInt(d.bed_count)*threshold/100);
+    recs.push({icon:'bed-double',text:`Add ${Math.max(neededBeds,2)} beds to <strong>${d.department_name}</strong> (currently at ${util}% utilization)`,priority:'high'});
+    if(parseInt(d.staff_count)<15)recs.push({icon:'user-plus',text:`Increase staffing in <strong>${d.department_name}</strong> (currently ${d.staff_count} staff for ${d.bed_count} beds)`,priority:'medium'});
+  });
+  if(!recs.length)recs.push({icon:'check-circle',text:'All departments operating within normal parameters. No immediate action needed.',priority:'low'});
+  // Check sustained overload
+  const sustainedDepts=overloadedDepts.filter(d=>{const deptEncs=encounters.filter(e=>e.department_id===d.department_id&&e.outcome==='Admitted');return deptEncs.length>parseInt(d.daily_capacity)*0.5});
+  if(sustainedDepts.length)recs.push({icon:'building-2',text:`Consider creating a new overflow department. <strong>${sustainedDepts.map(d=>d.department_name).join(', ')}</strong> show sustained overload patterns.`,priority:'high'});
+
+  document.getElementById('aiRecommendations').innerHTML=recs.map(r=>{
+    const colors={high:'border-l-vital-rose',medium:'border-l-vital-amber',low:'border-l-mint'}[r.priority];
+    return`<div class="flex items-start gap-3 p-3 bg-white rounded-lg border-l-4 ${colors}">
+      <i data-lucide="${r.icon}" class="w-4 h-4 mt-0.5 text-slate-500"></i>
+      <span class="text-sm text-slate-700">${r.text}</span>
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+function runSimulation(){
+  const addBeds=parseInt(document.getElementById('simBeds').value)||0;
+  const addStaff=parseInt(document.getElementById('simStaff').value)||0;
+  const targetDept=document.getElementById('simDept').value;
+  const evalNewDept=document.getElementById('simNewDept').checked;
+  const active=getActiveEncounters();
+  const threshold=localChanges.settings?.overload||85;
+
+  // Current metrics per department
+  const currentMetrics=departments.map(d=>{
+    const ac=active.filter(e=>e.department_id===d.department_id).length;
+    const util=Math.round((ac/parseInt(d.bed_count))*100);
+    const deptEncs=encounters.filter(e=>e.department_id===d.department_id);
+    const avgWait=Math.round(deptEncs.reduce((s,e)=>s+getWait(e),0)/Math.max(deptEncs.length,1));
+    return{id:d.department_id,name:d.department_name,beds:parseInt(d.bed_count),staff:parseInt(d.staff_count),active:ac,util,avgWait};
+  });
+
+  // Simulated metrics
+  const simMetrics=currentMetrics.map(m=>{
+    const isTarget=targetDept==='all'||m.id===targetDept;
+    const newBeds=m.beds+(isTarget?addBeds:0);
+    const newStaff=m.staff+(isTarget?addStaff:0);
+    const newUtil=Math.round((m.active/newBeds)*100);
+    // Wait time improves proportionally to staff increase
+    const staffRatio=newStaff/m.staff;
+    const newWait=Math.round(m.avgWait/Math.sqrt(staffRatio));
+    return{...m,newBeds,newStaff,newUtil,newWait};
+  });
+
+  // Summary KPIs
+  const currentOverloaded=currentMetrics.filter(m=>m.util>threshold).length;
+  const simOverloaded=simMetrics.filter(m=>m.newUtil>threshold).length;
+  const currentAvgUtil=Math.round(currentMetrics.reduce((s,m)=>s+m.util,0)/currentMetrics.length);
+  const simAvgUtil=Math.round(simMetrics.reduce((s,m)=>s+m.newUtil,0)/simMetrics.length);
+  const currentAvgWait=Math.round(currentMetrics.reduce((s,m)=>s+m.avgWait,0)/currentMetrics.length);
+  const simAvgWait=Math.round(simMetrics.reduce((s,m)=>s+m.newWait,0)/simMetrics.length);
+
+  document.getElementById('simKPIs').innerHTML=`
+    <div class="bg-white rounded-xl border border-slate-100 p-5">
+      <div class="text-xs text-slate-400 uppercase mb-2">Avg Utilization</div>
+      <div class="flex items-baseline gap-3">
+        <span class="text-2xl font-bold text-slate-300 line-through">${currentAvgUtil}%</span>
+        <span class="text-2xl font-bold text-mint">${simAvgUtil}%</span>
+      </div>
+      <div class="text-xs text-mint mt-1">↓ ${currentAvgUtil-simAvgUtil}% reduction</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 p-5">
+      <div class="text-xs text-slate-400 uppercase mb-2">Overloaded Departments</div>
+      <div class="flex items-baseline gap-3">
+        <span class="text-2xl font-bold text-slate-300 line-through">${currentOverloaded}</span>
+        <span class="text-2xl font-bold text-mint">${simOverloaded}</span>
+      </div>
+      <div class="text-xs text-mint mt-1">↓ ${currentOverloaded-simOverloaded} fewer alerts</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-100 p-5">
+      <div class="text-xs text-slate-400 uppercase mb-2">Avg Wait Time</div>
+      <div class="flex items-baseline gap-3">
+        <span class="text-2xl font-bold text-slate-300 line-through">${currentAvgWait} min</span>
+        <span class="text-2xl font-bold text-mint">${simAvgWait} min</span>
+      </div>
+      <div class="text-xs text-mint mt-1">↓ ${currentAvgWait-simAvgWait} min reduction</div>
+    </div>
+  `;
+
+  // Charts
+  const labels=simMetrics.map(m=>m.name);
+  if(charts.simWait)charts.simWait.destroy();
+  charts.simWait=new Chart(document.getElementById('simWaitChart'),{
+    type:'bar',data:{labels,datasets:[
+      {label:'Current Wait',data:currentMetrics.map(m=>m.avgWait),backgroundColor:'rgba(148,163,184,.4)',borderRadius:4},
+      {label:'Simulated Wait',data:simMetrics.map(m=>m.newWait),backgroundColor:'rgba(0,240,144,.6)',borderRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11,family:'Inter'},usePointStyle:true}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'},beginAtZero:true,title:{display:true,text:'Wait (min)'}}}}
+  });
+
+  if(charts.simUtil)charts.simUtil.destroy();
+  charts.simUtil=new Chart(document.getElementById('simUtilChart'),{
+    type:'bar',data:{labels,datasets:[
+      {label:'Current Utilization',data:currentMetrics.map(m=>m.util),backgroundColor:'rgba(148,163,184,.4)',borderRadius:4},
+      {label:'Simulated Utilization',data:simMetrics.map(m=>m.newUtil),backgroundColor:'rgba(0,240,144,.6)',borderRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11,family:'Inter'},usePointStyle:true}},annotation:{annotations:{threshold:{type:'line',yMin:threshold,yMax:threshold,borderColor:'#FF3B30',borderDash:[5,5],borderWidth:1,label:{content:threshold+'% threshold',enabled:true}}}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'},beginAtZero:true,max:150,title:{display:true,text:'Utilization %'}}}}
+  });
+
+  // New department evaluation
+  if(evalNewDept){
+    document.getElementById('newDeptResult').classList.remove('hidden');
+    const totalOverloadActive=currentMetrics.filter(m=>m.util>threshold).reduce((s,m)=>s+m.active-Math.floor(m.beds*threshold/100),0);
+    const verdict=totalOverloadActive>20;
+    document.getElementById('newDeptContent').innerHTML=`
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="bg-mint-slate rounded-lg p-4">
+          <div class="text-xs text-slate-400 uppercase mb-1">Overflow Patient Load</div>
+          <div class="text-xl font-bold text-slate-800">${totalOverloadActive}</div>
+          <div class="text-xs text-slate-400">Patients exceeding capacity thresholds</div>
+        </div>
+        <div class="bg-mint-slate rounded-lg p-4">
+          <div class="text-xs text-slate-400 uppercase mb-1">Recommendation</div>
+          <div class="text-xl font-bold ${verdict?'text-vital-rose':'text-mint'}">${verdict?'Recommended':'Not Needed'}</div>
+          <div class="text-xs text-slate-400">${verdict?'Sustained overload justifies new department':'Current adjustments should suffice'}</div>
+        </div>
+      </div>
+      ${verdict?`<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+        <strong>New Department Proposal:</strong> A 20-bed overflow unit with 8 staff members would absorb ${totalOverloadActive} excess patients, reducing average utilization to ${Math.round(simAvgUtil*0.75)}% and eliminating ${currentOverloaded} overload alerts.
+      </div>`:`<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-800">
+        Adding ${addBeds} beds and ${addStaff} staff to ${targetDept==='all'?'all departments':getDeptName(targetDept)} is projected to resolve current capacity constraints. Monitor for 30 days before re-evaluating.
+      </div>`}
+    `;
+  }else{
+    document.getElementById('newDeptResult').classList.add('hidden');
+  }
+
+  document.getElementById('simResults').classList.remove('hidden');
+  lucide.createIcons();
+  showToast('Simulation complete');
+}
+
+// ═══════════════════════════════════════════════════════
+// ALERTS & FHIR (Phase 4)
+// ═══════════════════════════════════════════════════════
+let alertRules=[
+  {id:1,name:'ER Overcrowding',condition:'utilization_above',threshold:85,severity:'critical',enabled:true},
+  {id:2,name:'Long Wait Alert',condition:'wait_above',threshold:90,severity:'warning',enabled:true},
+  {id:3,name:'Critical Patient Unattended',condition:'critical_unattended',threshold:30,severity:'critical',enabled:true}
+];
+
+function renderAlerts(){
+  document.getElementById('alertRules').innerHTML=alertRules.map(r=>{
+    const sev=r.severity==='critical'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700';
+    return`<div class="flex items-center justify-between p-3 bg-mint-slate rounded-lg">
+      <div class="flex items-center gap-3">
+        <input type="checkbox" ${r.enabled?'checked':''} onchange="toggleAlertRule(${r.id})" class="rounded border-slate-300 text-mint focus:ring-mint"/>
+        <div>
+          <div class="text-sm font-medium text-slate-700">${r.name}</div>
+          <div class="text-xs text-slate-400">${r.condition.replace(/_/g,' ')} → ${r.threshold}</div>
+        </div>
+      </div>
+      <span class="badge ${sev}">${r.severity}</span>
+    </div>`;
+  }).join('');
+  renderAlertsFeed();
+  document.getElementById('fhirLastSync').textContent=new Date().toLocaleString();
+  lucide.createIcons();
+}
+
+function generateAlerts(){
+  const active=getActiveEncounters();
+  const threshold=localChanges.settings?.overload||85;
+  const critWait=localChanges.settings?.critWait||90;
+  const feed=[];
+  // Check utilization alerts
+  departments.forEach(d=>{
+    const ac=active.filter(e=>e.department_id===d.department_id).length;
+    const util=Math.round((ac/parseInt(d.bed_count))*100);
+    if(util>threshold)feed.push({severity:'critical',msg:`${d.department_name} at ${util}% utilization (${ac}/${d.bed_count} beds)`,time:new Date()});
+  });
+  // Check wait alerts
+  active.forEach(e=>{
+    if(getWait(e)>critWait)feed.push({severity:'warning',msg:`Patient ${e.patient_id} waiting ${e.wait_minutes} min in ${getDeptName(e.department_id)}`,time:new Date()});
+  });
+  // Critical patients
+  active.filter(e=>e.triage_level==='Critical').forEach(e=>{
+    if(getWait(e)>30)feed.push({severity:'critical',msg:`Critical patient ${e.patient_id} unattended for ${e.wait_minutes} min`,time:new Date()});
+  });
+  localChanges.alerts=feed.slice(0,30);
+}
+
+function renderAlertsFeed(){
+  const feed=localChanges.alerts||[];
+  if(!feed.length){
+    document.getElementById('alertsFeed').innerHTML='<div class="text-sm text-slate-400 text-center py-6">No active alerts</div>';
+    return;
+  }
+  document.getElementById('alertsFeed').innerHTML=feed.map(a=>{
+    const icon=a.severity==='critical'?'alert-circle':'alert-triangle';
+    const color=a.severity==='critical'?'text-vital-rose bg-red-50 border-red-100':'text-vital-amber bg-amber-50 border-amber-100';
+    return`<div class="flex items-start gap-3 p-3 rounded-lg border ${color}">
+      <i data-lucide="${icon}" class="w-4 h-4 mt-0.5"></i>
+      <div class="flex-1">
+        <div class="text-xs font-medium">${a.msg}</div>
+        <div class="text-[10px] opacity-60 mt-1">${new Date(a.time).toLocaleTimeString()}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleAlertRule(id){const r=alertRules.find(a=>a.id===id);if(r)r.enabled=!r.enabled}
+
+function openAlertRuleModal(){document.getElementById('alertRuleModal').classList.remove('hidden')}
+function closeAlertRuleModal(){document.getElementById('alertRuleModal').classList.add('hidden')}
+
+function saveAlertRule(){
+  const name=document.getElementById('arName').value;
+  if(!name){showToast('Please enter a rule name');return}
+  alertRules.push({
+    id:Date.now(),name,
+    condition:document.getElementById('arCondition').value,
+    threshold:parseInt(document.getElementById('arThreshold').value),
+    severity:document.getElementById('arSeverity').value,
+    enabled:true
+  });
+  closeAlertRuleModal();renderAlerts();showToast('Alert rule created');
+}
+
+function simulateFHIRSync(){
+  document.getElementById('fhirLastSync').textContent='Syncing...';
+  setTimeout(()=>{
+    document.getElementById('fhirLastSync').textContent=new Date().toLocaleString();
+    showToast('FHIR sync completed — 4 resources updated');
+  },1500);
+}
+
+// ═══════════════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════════════
+function generateReport(type){
+  document.getElementById('reportOutput').classList.remove('hidden');
+  const active=getActiveEncounters();
+  if(type==='operational'){
+    document.getElementById('reportTitle').textContent='Operational Summary Report';
+    const totalBeds=departments.reduce((s,d)=>s+parseInt(d.bed_count),0);
+    const occupancy=Math.round((active.length/totalBeds)*100);
+    const avgWait=Math.round(encounters.reduce((s,e)=>s+getWait(e),0)/encounters.length);
+    document.getElementById('reportContent').innerHTML=`
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        <div class="bg-mint-slate rounded-lg p-4"><div class="text-xs text-slate-400">Total Encounters</div><div class="text-xl font-bold">${encounters.length.toLocaleString()}</div></div>
+        <div class="bg-mint-slate rounded-lg p-4"><div class="text-xs text-slate-400">Active Patients</div><div class="text-xl font-bold">${active.length}</div></div>
+        <div class="bg-mint-slate rounded-lg p-4"><div class="text-xs text-slate-400">Bed Occupancy</div><div class="text-xl font-bold">${occupancy}%</div></div>
+      </div>
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-slate-50"><th class="text-left p-3">Department</th><th class="text-left p-3">Active</th><th class="text-left p-3">Beds</th><th class="text-left p-3">Utilization</th><th class="text-left p-3">Avg Wait</th></tr></thead>
+        <tbody>${departments.map(d=>{
+          const ac=active.filter(e=>e.department_id===d.department_id).length;
+          const util=Math.round((ac/parseInt(d.bed_count))*100);
+          const deptEncs=encounters.filter(e=>e.department_id===d.department_id);
+          const aw=Math.round(deptEncs.reduce((s,e)=>s+getWait(e),0)/Math.max(deptEncs.length,1));
+          return`<tr class="border-t border-slate-100"><td class="p-3">${d.department_name}</td><td class="p-3">${ac}</td><td class="p-3">${d.bed_count}</td><td class="p-3">${util}%</td><td class="p-3">${aw} min</td></tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }else if(type==='bottleneck'){
+    document.getElementById('reportTitle').textContent='Bottleneck Analysis Report';
+    const ranked=active.map(e=>({enc:e,pat:patMap[e.patient_id],score:calcRiskScore(e,patMap[e.patient_id])})).sort((a,b)=>b.score-a.score).slice(0,20);
+    document.getElementById('reportContent').innerHTML=`
+      <p class="text-sm text-slate-500 mb-4">Top 20 patients by bottleneck risk score</p>
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-slate-50"><th class="text-left p-3">#</th><th class="text-left p-3">Patient</th><th class="text-left p-3">Dept</th><th class="text-left p-3">Triage</th><th class="text-left p-3">Wait</th><th class="text-left p-3">Score</th></tr></thead>
+        <tbody>${ranked.map((r,i)=>`<tr class="border-t border-slate-100"><td class="p-3">${i+1}</td><td class="p-3">${r.enc.patient_id}</td><td class="p-3">${getDeptName(r.enc.department_id)}</td><td class="p-3">${r.enc.triage_level}</td><td class="p-3">${r.enc.wait_minutes}</td><td class="p-3 font-bold ${r.score>60?'text-red-600':r.score>30?'text-amber-600':'text-emerald-600'}">${r.score}</td></tr>`).join('')}</tbody>
+      </table>`;
+  }else if(type==='ml'){
+    document.getElementById('reportTitle').textContent='ML Performance Report';
+    if(!mlModel){
+      document.getElementById('reportContent').innerHTML='<div class="text-sm text-slate-400 text-center py-6">Train the FlowCast model first to generate this report.</div>';
+      return;
+    }
+    document.getElementById('reportContent').innerHTML=`
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        <div class="bg-mint-slate rounded-lg p-4"><div class="text-xs text-slate-400">MAE</div><div class="text-xl font-bold">${mlModel.metrics.mae} min</div></div>
+        <div class="bg-mint-slate rounded-lg p-4"><div class="text-xs text-slate-400">RMSE</div><div class="text-xl font-bold">${mlModel.metrics.rmse} min</div></div>
+        <div class="bg-mint-slate rounded-lg p-4"><div class="text-xs text-slate-400">R²</div><div class="text-xl font-bold">${mlModel.metrics.r2}</div></div>
+      </div>
+      <h5 class="text-sm font-semibold mb-2">Feature Importance</h5>
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-slate-50"><th class="text-left p-3">Feature</th><th class="text-left p-3">Importance</th></tr></thead>
+        <tbody>${mlModel.featNames.map((f,i)=>`<tr class="border-t border-slate-100"><td class="p-3">${f}</td><td class="p-3"><div class="flex items-center gap-2"><div class="w-32 h-2 bg-slate-100 rounded-full"><div class="h-full bg-mint rounded-full" style="width:${mlModel.normImportance[i]}%"></div></div>${mlModel.normImportance[i]}%</div></td></tr>`).join('')}</tbody>
+      </table>`;
+  }
+}
+
+function exportReport(){
+  const table=document.querySelector('#reportContent table');
+  if(!table){showToast('No table data to export');return}
+  const rows=Array.from(table.rows);
+  const csv=rows.map(r=>Array.from(r.cells).map(c=>'"'+c.textContent.trim()+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pulseflow_report.csv';a.click();
+  showToast('Report exported as CSV');
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+function saveSettings(){
+  localChanges.settings={
+    overload:parseInt(document.getElementById('settingOverload').value)||85,
+    critWait:parseInt(document.getElementById('settingCritWait').value)||90,
+    refresh:parseInt(document.getElementById('settingRefresh').value)||60
+  };
+  saveLocal();showToast('Settings saved');
+}
+
+function resetLocalData(){
+  localStorage.removeItem('pulseflow_v2');
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════
+// GLOBAL SEARCH
+// ═══════════════════════════════════════════════════════
+function handleGlobalSearch(q){
+  if(!q||q.length<2)return;
+  // Quick search - find patient
+  const match=patients.find(p=>p.patient_id.toLowerCase().includes(q.toLowerCase()));
+  if(match){
+    showPage('patients');
+    document.getElementById('patDeptFilter').value='';
+    setPatientTab('all');
+  }
+}
+
+function refreshData(){
+  showToast('Data refreshed');
+  showPage(currentPage);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>

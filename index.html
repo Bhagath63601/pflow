@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PulseFlow — Intelligent Hospital-Flow & Bottleneck Prevention Engine</title>
+  <meta name="description" content="Awwwards-inspired clinical narrative experience for Track 1 Health: The Forgotten Patient. Turning Hospital Data into Zero Forgotten Patients.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩺</text></svg>">
+  <script>document.documentElement.classList.add('js');</script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <noscript><style>.photo img{opacity:1!important}.loader{display:none!important}</style></noscript>
+
+  <style>
+    /* ==========================================================================
+       HOSPITAL ADMIN COLOR PALETTE & DESIGN SYSTEM  (unchanged from v1)
+       Primary Ground (60%): #FFFFFF   Accent & Vitality (30%): #00F090
+       Card Containers: #F1F6F3        Critical: #FF3B30   Warning: #FF9F1C
+       Ink (cinematic scenes): #08111E
+       ========================================================================== */
+    :root {
+      --bg-ground: #FFFFFF;
+      --accent-mint: #00F090;
+      --mint-glow: rgba(0, 240, 144, 0.4);
+      --mint-subtle: rgba(0, 240, 144, 0.12);
+      --card-bg: #F1F6F3;
+      --card-hover: #E8F1EC;
+      --alert-rose: #FF3B30;
+      --rose-subtle: rgba(255, 59, 48, 0.12);
+      --alert-amber: #FF9F1C;
+      --amber-subtle: rgba(255, 159, 28, 0.12);
+      --text-hero: #08111E;
+      --text-body: #334155;
+      --text-muted: #64748B;
+      --ink: #08111E;
+      --line-dark: rgba(255, 255, 255, 0.1);
+      --border-subtle: rgba(11, 23, 39, 0.08);
+      --border-accent: rgba(0, 240, 144, 0.45);
+
+      --font-serif: 'Instrument Serif', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --ease-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-ground);
+      color: var(--text-hero);
+      font-family: var(--font-sans);
+    }
+
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-x: clip;               /* clip (not hidden) keeps position:sticky working */
+      -webkit-font-smoothing: antialiased;
+      background-color: var(--bg-ground);
+    }
+
+    img { display: block; max-width: 100%; }
+    a { color: inherit; }
+
+    ::-webkit-scrollbar { width: 7px; }
+    ::-webkit-scrollbar-track { background: #FFFFFF; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-mint); }
+
+    .wrap { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 2rem; }
+
+    /* ==========================================================================
+       LOADER — counts up, then the whole screen zooms through
+       ========================================================================== */
+    .loader {
+      position: fixed; inset: 0; z-index: 2000; background: #FFFFFF;
+      display: grid; place-items: center;
+      transition: transform 1.2s var(--ease-fluid), opacity 0.9s ease 0.15s, visibility 0s linear 1.3s;
+      will-change: transform, opacity;
+      animation: loaderFailsafe 0.5s ease 7s forwards;   /* never trap the user */
+    }
+    .loader.done { transform: scale(2.6); opacity: 0; visibility: hidden; pointer-events: none; }
+    @keyframes loaderFailsafe { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+    .loader-inner { text-align: center; }
+    .loader-ecg { width: min(320px, 70vw); height: 60px; margin: 0 auto 0.5rem; display: block; }
+    .loader-ecg path {
+      fill: none; stroke: #00C875; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+      stroke-dasharray: 520; stroke-dashoffset: 520; animation: ecgDraw 1.6s ease-in-out infinite;
+      filter: drop-shadow(0 0 6px rgba(0, 240, 144, 0.7));
+    }
+    @keyframes ecgDraw { 0% { stroke-dashoffset: 520; } 70%, 100% { stroke-dashoffset: 0; } }
+    .loader-count {
+      font-family: var(--font-serif); font-size: clamp(5rem, 16vw, 11rem); line-height: 0.95;
+      color: var(--text-hero); letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+    }
+    .loader-count small { font-family: var(--font-mono); font-size: 0.18em; color: #00874e; margin-left: 0.4rem; letter-spacing: 0; }
+    .loader-label { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; color: var(--text-muted); margin-top: 0.75rem; }
+
+    /* ==========================================================================
+       CUSTOM CURSOR (fine pointers only)
+       ========================================================================== */
+    .cursor, .cursor-dot { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 1900; border-radius: 50%; }
+    .cursor {
+      width: 38px; height: 38px; border: 1.5px solid rgba(0, 200, 117, 0.9);
+      transform: translate3d(-100px, -100px, 0);
+      transition: width 0.3s var(--ease-fluid), height 0.3s var(--ease-fluid), background 0.3s, border-color 0.3s;
+    }
+    .cursor.hover { width: 76px; height: 76px; background: rgba(0, 240, 144, 0.14); border-color: var(--accent-mint); }
+    .cursor-dot { width: 6px; height: 6px; background: var(--accent-mint); box-shadow: 0 0 10px var(--mint-glow); transform: translate3d(-100px, -100px, 0); }
+    @media (hover: none), (pointer: coarse) { .cursor, .cursor-dot { display: none; } }
+
+    /* Top reading progress */
+    .scroll-progress-line {
+      position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+      background: linear-gradient(90deg, #00F090, #00C875, #00F090); background-size: 200% 100%;
+      animation: gradientShift 4s linear infinite; z-index: 1000; box-shadow: 0 0 12px var(--mint-glow);
+    }
+    @keyframes gradientShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+    /* Ambient mesh */
+    .ambient-mesh { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; opacity: 0.9; }
+    .mesh-orb { position: absolute; border-radius: 50%; filter: blur(100px); animation: meshFlow 22s ease-in-out infinite alternate; }
+    .mesh-orb-1 { width: 750px; height: 750px; background: radial-gradient(circle, rgba(0,240,144,0.14) 0%, rgba(241,246,243,0) 70%); top: -200px; left: -200px; }
+    .mesh-orb-2 { width: 650px; height: 650px; background: radial-gradient(circle, rgba(0,240,144,0.1) 0%, rgba(255,159,28,0.05) 50%, rgba(255,255,255,0) 70%); bottom: -150px; right: -150px; animation-duration: 26s; animation-delay: -7s; }
+    .mesh-orb-3 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(255,59,48,0.06) 0%, rgba(241,246,243,0) 70%); top: 45%; right: 15%; animation-duration: 30s; animation-delay: -12s; }
+    @keyframes meshFlow { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(70px,50px) scale(1.1); } 100% { transform: translate(-50px,80px) scale(0.92); } }
+
+    /* ==========================================================================
+       FLOATING NAV
+       ========================================================================== */
+    .site-nav {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      width: calc(100% - 40px); max-width: 1240px; height: 62px; padding: 0 1.5rem;
+      display: flex; align-items: center; justify-content: space-between; z-index: 900;
+      background: rgba(255,255,255,0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(11,23,39,0.07); border-radius: 9999px;
+      box-shadow: 0 10px 30px rgba(11,23,39,0.04), 0 1px 3px rgba(0,0,0,0.02);
+      transition: all 0.3s var(--ease-fluid);
+    }
+    .site-nav.scrolled { background: rgba(255,255,255,0.95); box-shadow: 0 15px 35px rgba(11,23,39,0.08); border-color: rgba(0,240,144,0.3); }
+    .nav-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: inherit; }
+    .brand-icon-pill { width: 34px; height: 34px; background: var(--text-hero); color: var(--accent-mint); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+    .brand-title { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; list-style: none; }
+    .nav-link-item a { font-size: 0.76rem; font-weight: 600; color: var(--text-muted); text-decoration: none; padding: 0.4rem 0.75rem; border-radius: 9999px; transition: all 0.15s ease; }
+    .nav-link-item a:hover { color: var(--text-hero); background: var(--card-bg); }
+    .nav-link-item a.active { color: #00874e; background: var(--mint-subtle); font-weight: 700; }
+    .nav-actions { display: flex; align-items: center; gap: 0.65rem; }
+
+    .btn-nav-primary {
+      font-family: var(--font-sans); font-size: 0.78rem; font-weight: 700; padding: 0.45rem 1.15rem; border-radius: 9999px;
+      background: var(--accent-mint); color: #042417; text-decoration: none; border: 0; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s var(--ease-fluid), translate 0.25s var(--ease-fluid);
+      box-shadow: 0 2px 10px var(--mint-glow);
+    }
+    .btn-nav-primary:hover { background: #00dd82; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,240,144,0.45); }
+
+    .status-badge { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.45rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .status-badge.live { background: var(--mint-subtle); border: 1px solid rgba(0,240,144,0.4); color: #00874e; }
+    .pulse-ring { width: 7px; height: 7px; border-radius: 50%; background: #00C875; box-shadow: 0 0 8px #00F090; animation: pingWave 2s cubic-bezier(0,0,0.2,1) infinite; }
+    @keyframes pingWave { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: 0.5; } }
+
+    /* ==========================================================================
+       SCENE ENGINE — tall wrapper + sticky stage, driven by scroll progress
+       ========================================================================== */
+    .scroll-container { position: relative; z-index: 10; }
+    .scene { position: relative; }
+    .stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+
+    .scroll-section { position: relative; max-width: 1240px; margin: 0 auto; padding: 6rem 2rem; display: flex; flex-direction: column; justify-content: center; }
+
+    /* Reveals use individual transform props so they never fight 3D tilt */
+    .js .reveal-item {
+      opacity: 0; translate: 0 38px; scale: 0.97;
+      transition: opacity 0.9s var(--ease-fluid) var(--d, 0s), translate 0.9s var(--ease-fluid) var(--d, 0s), scale 1.1s var(--ease-fluid) var(--d, 0s);
+      will-change: opacity, translate;
+    }
+    .js .reveal-item.revealed { opacity: 1; translate: 0 0; scale: 1; }
+    .js .reveal-item.zoom-in { scale: 0.86; }
+    .js .reveal-item.zoom-in.revealed { scale: 1; }
+    .delay-1 { --d: 0.1s; } .delay-2 { --d: 0.2s; } .delay-3 { --d: 0.3s; } .delay-4 { --d: 0.4s; }
+
+    /* Word-mask headline reveal */
+    .split .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.14em; margin-bottom: -0.14em; }
+    .split .wi { display: inline-block; transform: translateY(112%) scale(1.08); transform-origin: 0 100%; transition: transform 1.1s var(--ease-fluid) calc(var(--i) * 55ms); }
+    .split.revealed .wi { transform: none; }
+
+    /* Typography */
+    .hero-eyebrow, .section-eyebrow {
+      font-family: var(--font-mono); font-weight: 700; text-transform: uppercase; color: #00874e;
+      display: flex; align-items: center; gap: 0.65rem;
+    }
+    .hero-eyebrow { font-size: 0.82rem; letter-spacing: 0.1em; margin-bottom: 1.25rem; }
+    .section-eyebrow { font-size: 0.78rem; letter-spacing: 0.08em; margin-bottom: 0.75rem; gap: 0.5rem; }
+    .hero-eyebrow::before { content: ''; width: 24px; height: 2px; background: var(--accent-mint); }
+    .section-eyebrow::before { content: ''; width: 16px; height: 2px; background: var(--accent-mint); }
+
+    .hero-display {
+      font-family: var(--font-serif); font-size: clamp(2.9rem, 6.4vw, 6rem); line-height: 0.98; font-weight: 400;
+      color: var(--text-hero); letter-spacing: -0.03em; margin-bottom: 1.5rem; max-width: 1050px;
+    }
+    .hero-subhead { font-size: 1.18rem; line-height: 1.55; color: var(--text-body); max-width: 760px; margin-bottom: 2.25rem; }
+
+    .section-header { margin-bottom: 3.5rem; }
+    .section-title { font-family: var(--font-serif); font-size: clamp(2.4rem, 4.5vw, 4rem); line-height: 1.05; font-weight: 400; color: var(--text-hero); letter-spacing: -0.02em; margin-bottom: 1rem; }
+    .section-desc { font-size: 1.1rem; color: var(--text-muted); max-width: 780px; line-height: 1.6; }
+
+    .hero-display em, .section-title em, .finale-title em { font-style: italic; color: #00874e; background-image: linear-gradient(transparent 84%, rgba(0,240,144,0.42) 84%); }
+    .split em { background-image: none; }
+    .split em .wi { background-image: linear-gradient(transparent 84%, rgba(0,240,144,0.42) 84%); }
+    .finale-title em { color: var(--accent-mint); }
+
+    /* Cards */
+    .glass-card {
+      background: var(--card-bg); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 2.25rem;
+      position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(11,23,39,0.02);
+      transition: background 0.35s, border-color 0.35s, box-shadow 0.35s, translate 0.35s var(--ease-fluid);
+    }
+    .glass-card:hover { background: var(--card-hover); border-color: var(--border-accent); box-shadow: 0 16px 36px rgba(0,240,144,0.09); }
+    .js .glass-card.revealed:hover { translate: 0 -4px; }
+    .glass-card::after {
+      content: ''; position: absolute; top: -60%; left: -60%; width: 220%; height: 220%;
+      background: linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.6) 48%, rgba(0,240,144,0.2) 50%, transparent 54%);
+      transform: rotate(25deg) translateY(-100%); opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .glass-card:hover::after { opacity: 1; animation: beamSweep 1.3s ease-in-out forwards; }
+    @keyframes beamSweep { 0% { transform: rotate(25deg) translateY(-100%); } 100% { transform: rotate(25deg) translateY(100%); } }
+
+    /* 3D tilt + glare, magnetic buttons (JS sets --rx --ry --mx --my) */
+    .tilt { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform 0.35s ease-out; }
+    .tilt.is-hot { transition: transform 0.08s linear; }
+    .js .reveal-item.tilt {
+      transition: opacity 0.9s var(--ease-fluid) var(--d, 0s), translate 0.9s var(--ease-fluid) var(--d, 0s), scale 1.1s var(--ease-fluid) var(--d, 0s),
+                  transform 0.35s ease-out, background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+    .glare { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s; background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.75), rgba(0,240,144,0.1) 35%, transparent 60%); z-index: 3; }
+    .tilt:hover > .glare { opacity: 1; }
+
+    /* Image block with designed fallback (shows if a photo fails to load) */
+    .photo { position: relative; overflow: hidden; background: radial-gradient(120% 90% at 20% 10%, rgba(0,240,144,0.28), transparent 55%), linear-gradient(135deg, #0d2238, #102f45 55%, #0a1a2c); }
+    .photo::before { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px) 0 0/44px 44px, linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0/44px 44px; }
+    .photo.light { background: linear-gradient(135deg, #eef6f1, #dff3e8); }
+    .photo.light::before { background: linear-gradient(rgba(8,17,30,0.05) 1px, transparent 1px) 0 0/44px 44px, linear-gradient(90deg, rgba(8,17,30,0.05) 1px, transparent 1px) 0 0/44px 44px; }
+    .photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.9s ease, scale 1.2s var(--ease-fluid); }
+    .photo img.loaded { opacity: 1; }
+
+    /* ==========================================================================
+       SCENE 1 · HERO — zoom through the corridor, then the 3D console rises
+       ========================================================================== */
+    .hero-scene { height: 380vh; }
+    .hero-scene .stage { background: #FFFFFF; }
+    .hero-bg { position: absolute; inset: -4%; transform-origin: 66% 54%; will-change: transform; }
+    .hero-bg .photo { position: absolute; inset: 0; }
+    .hero-veil { position: absolute; inset: 0; background: linear-gradient(95deg, #FFFFFF 0%, rgba(255,255,255,0.93) 34%, rgba(255,255,255,0.55) 66%, rgba(232,246,239,0.5) 100%); }
+    .hero-dark { position: absolute; inset: 0; opacity: 0; background: radial-gradient(90% 70% at 50% 38%, #12304d 0%, var(--ink) 70%); }
+    .hero-dark::after { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px) 0 0/56px 56px, linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px) 0 0/56px 56px; mask-image: radial-gradient(70% 60% at 50% 45%, #000, transparent); -webkit-mask-image: radial-gradient(70% 60% at 50% 45%, #000, transparent); }
+    .hero-copy { position: absolute; inset: 0; display: flex; align-items: center; transform-origin: 28% 52%; will-change: transform, opacity; }
+    .hero-copy > .wrap { padding-top: 74px; }
+    .hero-vitals-grid { display: grid; grid-template-columns: 1.35fr 0.9fr; gap: 3rem; align-items: center; }
+
+    .panel-wrap { position: relative; }
+    .vitals-monitor-panel { background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: 24px; padding: 2rem; box-shadow: 0 25px 60px rgba(11,23,39,0.1); position: relative; }
+    .monitor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono); }
+    .ecg-canvas { width: 100%; height: 130px; display: block; border-bottom: 1px solid var(--border-subtle); margin-bottom: 1.4rem; background: linear-gradient(rgba(0,200,117,0.07) 1px, transparent 1px) 0 0/100% 26px, linear-gradient(90deg, rgba(0,200,117,0.07) 1px, transparent 1px) 0 0/26px 100%; }
+    .vitals-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+    .vitals-stat { font-family: var(--font-mono); }
+    .vitals-stat-num { font-size: 1.6rem; font-weight: 800; color: var(--text-hero); line-height: 1; margin-bottom: 0.25rem; }
+    .vitals-stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+
+    /* Floating 3D chips around the monitor (mouse-parallax) */
+    .chip3d { position: absolute; z-index: 4; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 800; padding: 0.55rem 0.85rem; border-radius: 12px; background: rgba(255,255,255,0.96); border: 1px solid var(--border-subtle); box-shadow: 0 18px 40px rgba(11,23,39,0.14); display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;
+      transform: translate3d(calc(var(--px, 0) * 34px * var(--dp)), calc(var(--py, 0) * 24px * var(--dp)), 0); transition: transform 0.25s ease-out; animation: floaty 6s ease-in-out infinite; }
+    .chip3d i { width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--accent-mint)); box-shadow: 0 0 10px var(--c, var(--accent-mint)); }
+    .chip-a { top: -22px; right: -16px; --dp: 1.6; --c: var(--alert-rose); }
+    .chip-b { bottom: -24px; left: -30px; --dp: 2.1; animation-delay: -2s; }
+    .chip-c { right: -34px; bottom: 34%; --dp: 1.2; --c: var(--alert-amber); animation-delay: -4s; }
+    @keyframes floaty { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+
+    .scroll-hint { position: absolute; left: 50%; bottom: 26px; translate: -50% 0; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.18em; color: var(--text-muted); text-transform: uppercase; z-index: 5; }
+    .scroll-hint i { width: 1.5px; height: 44px; background: linear-gradient(var(--accent-mint), transparent); transform-origin: top; animation: hintLine 2s ease-in-out infinite; }
+    @keyframes hintLine { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(1); opacity: 0; } }
+
+    /* Hero reveal: 3D operations console */
+    .hero-reveal { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; pointer-events: none; perspective: 1700px; padding-top: 96px; transform-origin: 50% 70%; will-change: transform, opacity; }
+    .console-plane { width: min(1080px, 90vw); border-radius: 22px; background: linear-gradient(160deg, #10233a, #0a1626); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 60px 120px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,240,144,0.12), 0 0 140px rgba(0,240,144,0.14); transform-style: preserve-3d; transform-origin: 50% 100%; transform: rotateX(62deg) rotateZ(-8deg); will-change: transform; color: #dbe7f3; overflow: hidden; }
+    .cn-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.8rem 1.1rem; border-bottom: 1px solid var(--line-dark); font: 600 0.72rem var(--font-mono); }
+    .cn-bar i { width: 10px; height: 10px; border-radius: 50%; background: #2b3d55; }
+    .cn-bar i:nth-child(1) { background: #ff5f57; } .cn-bar i:nth-child(2) { background: #febc2e; } .cn-bar i:nth-child(3) { background: #28c840; }
+    .cn-bar span { margin-left: 0.7rem; color: #9bb0c7; }
+    .cn-bar b { margin-left: auto; color: var(--accent-mint); font-weight: 700; }
+    .cn-body { display: grid; grid-template-columns: 150px 1fr; }
+    .cn-side { padding: 1rem 0.8rem; border-right: 1px solid var(--line-dark); display: flex; flex-direction: column; gap: 0.35rem; font: 600 0.74rem var(--font-sans); }
+    .cn-side u { text-decoration: none; padding: 0.5rem 0.7rem; border-radius: 9px; color: #8aa0b8; }
+    .cn-side u.on { background: rgba(0,240,144,0.14); color: var(--accent-mint); }
+    .cn-main { padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; }
+    .cn-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; }
+    .cn-kpi { background: rgba(255,255,255,0.04); border: 1px solid var(--line-dark); border-radius: 12px; padding: 0.7rem 0.8rem; }
+    .cn-kpi small { display: block; font: 600 0.6rem var(--font-mono); color: #7f94ac; text-transform: uppercase; margin-bottom: 0.15rem; }
+    .cn-kpi strong { font: 800 1.45rem var(--font-mono); color: #fff; }
+    .cn-kpi strong.r { color: #ff7a72; } .cn-kpi strong.m { color: var(--accent-mint); } .cn-kpi strong.a { color: #ffbf66; }
+    .cn-cols { display: grid; grid-template-columns: 1.05fr 1fr; gap: 0.9rem; }
+    .cn-panel { background: rgba(255,255,255,0.035); border: 1px solid var(--line-dark); border-radius: 14px; padding: 0.8rem; min-width: 0; }
+    .cn-panel h6 { font: 700 0.64rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: #8ea4bc; margin-bottom: 0.6rem; }
+    .heat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+    .heat-tile { aspect-ratio: 1.5; border-radius: 9px; padding: 0.35rem 0.45rem; display: flex; flex-direction: column; justify-content: space-between; font: 700 0.6rem var(--font-mono); color: var(--tx, #04210f); background: var(--tc, #00F090); transition: background 0.6s, color 0.6s; }
+    .heat-tile em { font-style: normal; font-size: 0.88rem; }
+    .q-row { display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; align-items: center; padding: 0.5rem 0.6rem; border-radius: 10px; background: rgba(255,255,255,0.04); margin-bottom: 0.4rem; font: 600 0.7rem var(--font-sans); }
+    .q-row code { font: 700 0.64rem var(--font-mono); color: #8ea4bc; }
+    .q-row span { color: #dbe7f3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rk { font: 800 0.66rem var(--font-mono); padding: 0.15rem 0.5rem; border-radius: 999px; font-style: normal; }
+    .rk.hi { background: rgba(255,59,48,0.2); color: #ff8a82; } .rk.mid { background: rgba(255,159,28,0.2); color: #ffc070; } .rk.lo { background: rgba(0,240,144,0.16); color: var(--accent-mint); }
+    .cn-foot { font: 600 0.6rem var(--font-mono); color: #5f748c; text-align: right; padding: 0 0.2rem 0.2rem; }
+
+    .hero-caption { position: absolute; top: 104px; left: 0; right: 0; text-align: center; opacity: 0; color: #fff; padding: 0 1.5rem; pointer-events: none; }
+    .hero-caption .cap-eyebrow { font: 700 0.74rem var(--font-mono); letter-spacing: 0.16em; color: var(--accent-mint); text-transform: uppercase; margin-bottom: 0.5rem; }
+    .hero-caption .cap-title { font-family: var(--font-serif); font-size: clamp(1.8rem, 3.6vw, 3.1rem); line-height: 1.05; letter-spacing: -0.02em; }
+    .hero-caption .cap-title em { color: var(--accent-mint); }
+
+    /* Marquee (kept) — now skews with scroll velocity */
+    .marquee-wrapper { overflow: hidden; white-space: nowrap; position: relative; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); padding: 0.85rem 0; background: #FFFFFF; }
+    .marquee-skew { will-change: transform; }
+    .marquee-track { display: inline-flex; align-items: center; gap: 3.5rem; animation: continuousMarquee 40s linear infinite; }
+    @keyframes continuousMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .marquee-node { font-family: var(--font-mono); font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.65rem; }
+    .node-pill { font-weight: 800; color: var(--text-hero); }
+    .node-val { font-weight: 800; color: #00874e; }
+    .node-alert { font-weight: 800; color: var(--alert-rose); }
+
+    /* ==========================================================================
+       SCENE 2 · "HOUR 0" — zoom-out window reveal with a live delay clock
+       ========================================================================== */
+    .problem-scene { height: 330vh; }
+    .problem-scene .stage { background: var(--ink); }
+    .pz-frame { position: absolute; inset: 0; clip-path: inset(26% 34% 26% 34% round 44px); will-change: clip-path; }
+    .pz-photo { position: absolute; inset: 0; transform: scale(1.75); will-change: transform; }
+    .pz-photo .photo { position: absolute; inset: 0; }
+    .pz-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,17,30,0.55), rgba(8,17,30,0.86)); }
+    .pz-ui { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; padding: 0 1.5rem; opacity: 0; }
+    .pz-eyebrow { font: 700 0.76rem var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-mint); margin-bottom: 0.4rem; }
+    .pz-timer { font-family: var(--font-serif); font-size: clamp(5.5rem, 17vw, 15rem); line-height: 0.92; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--accent-mint); transition: color 0.5s; text-shadow: 0 0 60px rgba(0,240,144,0.25); }
+    .pz-timer.warn { color: var(--alert-amber); text-shadow: 0 0 60px rgba(255,159,28,0.3); }
+    .pz-timer.bad { color: #ff7a2f; text-shadow: 0 0 60px rgba(255,122,47,0.3); }
+    .pz-timer.crit { color: var(--alert-rose); text-shadow: 0 0 70px rgba(255,59,48,0.4); }
+    .pz-sub { font-family: var(--font-serif); font-style: italic; font-size: clamp(1.4rem, 3vw, 2.4rem); color: rgba(255,255,255,0.85); margin-top: 0.4rem; }
+    .pz-miles { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; width: min(1000px, 100%); margin-top: 2.6rem; }
+    .pz-miles li { border-top: 2px solid rgba(255,255,255,0.18); padding-top: 0.8rem; text-align: left; opacity: 0.35; transition: opacity 0.5s, border-color 0.5s; }
+    .pz-miles li.on { opacity: 1; border-color: var(--accent-mint); }
+    .pz-miles li.on.l3 { border-color: var(--alert-rose); }
+    .pz-miles b { display: block; font: 800 1.2rem var(--font-mono); }
+    .pz-miles span { font-size: 0.76rem; color: rgba(255,255,255,0.7); line-height: 1.4; display: block; margin-top: 0.2rem; }
+
+    .problem-layout { display: grid; grid-template-columns: 1fr 1.15fr; gap: 3rem; align-items: center; }
+    .pain-cards-stack { display: flex; flex-direction: column; gap: 1.25rem; }
+    .pain-card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border-left: 4px solid var(--alert-rose); transition: background 0.25s, translate 0.25s var(--ease-fluid), box-shadow 0.25s; }
+    .pain-card:hover { translate: 6px 0; background: #fdf2f1; box-shadow: 0 14px 30px rgba(255,59,48,0.08); }
+    .pain-idx { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 800; color: var(--alert-rose); margin-bottom: 0.25rem; }
+    .pain-heading { font-size: 1.05rem; font-weight: 800; color: var(--text-hero); margin-bottom: 0.35rem; }
+    .pain-text { font-size: 0.86rem; color: var(--text-body); line-height: 1.55; }
+
+    .cascade-visual-box { background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: 24px; padding: 2.25rem; box-shadow: 0 20px 45px rgba(11,23,39,0.05); }
+    .cascade-stage { margin-bottom: 1.25rem; }
+    .cascade-header { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.78rem; margin-bottom: 0.4rem; color: var(--text-muted); gap: 1rem; }
+    .cascade-bar { width: 100%; height: 10px; background: var(--card-bg); border-radius: 9999px; overflow: hidden; }
+    .cascade-fill { height: 100%; width: 0; border-radius: 9999px; transition: width 1.4s var(--ease-fluid) var(--wd, 0s); }
+    .revealed .cascade-fill, .no-js .cascade-fill { width: var(--w); }
+    .cascade-stage:nth-of-type(2) .cascade-fill { --wd: 0.15s; } .cascade-stage:nth-of-type(3) .cascade-fill { --wd: 0.3s; } .cascade-stage:nth-of-type(4) .cascade-fill { --wd: 0.45s; }
+    .stat-callout-card { background: linear-gradient(135deg, var(--card-bg), #FFFFFF); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 1.5rem; margin-top: 1.75rem; }
+    .stat-callout-quote { font-size: 1.4rem; font-weight: 800; font-family: var(--font-mono); color: var(--alert-rose); line-height: 1.25; letter-spacing: -0.02em; }
+
+    /* ==========================================================================
+       SECTION 3 · SOLUTION — 3D tilt pillars with live UI previews
+       ========================================================================== */
+    .pillars-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; margin-bottom: 2.5rem; }
+    .pillar-card { min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; }
+    .pillar-card.glass-card:hover { background: #FFFFFF; border-color: var(--accent-mint); box-shadow: 0 16px 36px rgba(0,240,144,0.12); }
+    .pillar-num { font-family: var(--font-serif); font-size: 2.8rem; color: #00C875; line-height: 1; margin-bottom: 1rem; }
+    .pillar-title { font-size: 1.2rem; font-weight: 800; color: var(--text-hero); margin-bottom: 0.65rem; letter-spacing: -0.01em; }
+    .pillar-desc { font-size: 0.9rem; color: var(--text-body); line-height: 1.6; }
+    .pillar-foot { margin-top: 1.25rem; font-family: var(--font-mono); font-size: 0.75rem; color: #00874e; font-weight: 700; }
+
+    .mini { margin-top: 1.25rem; background: #0B1626; border-radius: 14px; padding: 0.85rem; color: #dbe7f3; font: 600 0.7rem var(--font-sans); position: relative; z-index: 1; }
+    .mini-tag { position: absolute; top: -9px; right: 12px; font: 800 0.56rem var(--font-mono); letter-spacing: 0.1em; padding: 0.15rem 0.5rem; border-radius: 999px; background: var(--accent-mint); color: #042417; text-transform: uppercase; }
+    .bar-row { display: grid; grid-template-columns: 96px 1fr 34px; gap: 0.6rem; align-items: center; margin-bottom: 0.55rem; }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-row em { font-style: normal; color: #9bb0c7; font: 700 0.64rem var(--font-mono); }
+    .bar-row u { text-decoration: none; height: 8px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; display: block; }
+    .bar-row u i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--accent-mint); transition: width 1.3s var(--ease-fluid) 0.3s; }
+    .revealed .bar-row u i { width: var(--w); }
+    .bar-row u i.hi { background: var(--alert-rose); } .bar-row u i.mid { background: var(--alert-amber); }
+    .bar-row b { font: 800 0.66rem var(--font-mono); text-align: right; }
+    .mini .q-row { margin-bottom: 0.35rem; }
+    .dr-h { font: 800 0.68rem var(--font-mono); color: var(--accent-mint); margin-bottom: 0.4rem; }
+    .mini p { color: #dbe7f3; line-height: 1.5; font-size: 0.74rem; margin-bottom: 0.65rem; }
+    .dr-btn { display: inline-block; font: 800 0.66rem var(--font-sans); background: var(--accent-mint); color: #042417; padding: 0.4rem 0.8rem; border-radius: 999px; }
+
+    .usp-banner { background: linear-gradient(135deg, rgba(0,240,144,0.14), rgba(241,246,243,0.95)); border: 1.5px solid var(--accent-mint); border-radius: 20px; padding: 2rem 2.5rem; display: flex; align-items: center; justify-content: space-between; gap: 2.5rem; box-shadow: 0 12px 30px var(--mint-glow); }
+    .usp-title { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; color: #00874e; margin-bottom: 0.35rem; }
+    .usp-quote { font-size: 1.35rem; font-weight: 800; color: var(--text-hero); letter-spacing: -0.02em; line-height: 1.35; }
+
+    /* ==========================================================================
+       SCENE 4 · ARCHITECTURE — exploded 3D layer stack
+       ========================================================================== */
+    .arch-scene { height: 320vh; }
+    .arch-stage { background: linear-gradient(180deg, #FFFFFF, #EAF5EF); }
+    .arch-split { position: relative; height: 100%; max-width: 1240px; margin: 0 auto; padding: 90px 2rem 0; display: grid; grid-template-columns: 1fr 1.1fr; align-items: center; gap: 2rem; }
+    .arch-copy .section-title { font-size: clamp(2.2rem, 4vw, 3.6rem); }
+    .arch-caps { position: relative; min-height: 150px; margin-top: 1.8rem; }
+    .arch-cap { position: absolute; inset: 0; opacity: 0; translate: 0 18px; transition: opacity 0.5s, translate 0.6s var(--ease-fluid); }
+    .arch-cap.on { opacity: 1; translate: 0 0; }
+    .arch-cap .step { display: inline-block; font: 800 0.7rem var(--font-mono); text-transform: uppercase; padding: 0.25rem 0.6rem; border-radius: 6px; background: var(--text-hero); color: var(--accent-mint); margin-bottom: 0.7rem; }
+    .arch-cap h4 { font-size: 1.35rem; font-weight: 800; margin-bottom: 0.4rem; letter-spacing: -0.01em; }
+    .arch-cap p { font-size: 0.95rem; color: var(--text-body); line-height: 1.6; max-width: 460px; }
+    .arch-dots { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .arch-dots i { width: 34px; height: 4px; border-radius: 4px; background: rgba(11,23,39,0.12); transition: background 0.4s, width 0.4s; }
+    .arch-dots i.on { background: #00C875; width: 56px; }
+
+    .stack-wrap { perspective: 1500px; display: grid; place-items: center; height: 100%; }
+    .stack { position: relative; width: min(360px, 62vw); aspect-ratio: 1; transform-style: preserve-3d; will-change: transform; transform: rotateX(60deg) rotateZ(-40deg); --gap: 150px; }
+    .plane { position: absolute; inset: 0; border-radius: 22px; background: rgba(255,255,255,0.9); border: 1.5px solid rgba(11,23,39,0.12); box-shadow: 0 30px 60px rgba(11,23,39,0.12); padding: 1.1rem; font-family: var(--font-mono); transition: border-color 0.4s, box-shadow 0.4s; }
+    .plane.hot { border-color: var(--accent-mint); box-shadow: 0 0 0 5px rgba(0,240,144,0.18), 0 40px 90px rgba(0,240,144,0.28); }
+    .plane-tag { font: 800 0.66rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: #00874e; margin-bottom: 0.75rem; display: block; }
+    .plane ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .plane li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.66rem; font-weight: 700; color: var(--text-body); padding: 0.5rem 0.6rem; border-radius: 10px; background: var(--card-bg); }
+    .plane li b { color: var(--text-hero); }
+    .plane li s { text-decoration: none; display: block; height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--accent-mint), #00C875); width: var(--w, 60%); }
+    .plane li.bar { flex-direction: column; align-items: stretch; gap: 0.35rem; }
+    .plane li.r b { color: var(--alert-rose); }
+    .beams { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+    .beam { position: absolute; width: 2px; height: calc(var(--gap) * 2); background: linear-gradient(to bottom, rgba(0,240,144,0.9), rgba(0,240,144,0.05)); transform-origin: 50% 0; transform: rotateX(90deg); }
+    .beam:nth-child(1) { left: 10%; top: 10%; } .beam:nth-child(2) { left: 90%; top: 10%; } .beam:nth-child(3) { left: 10%; top: 90%; } .beam:nth-child(4) { left: 90%; top: 90%; }
+
+    .arch-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+    .arch-card { border-radius: 18px; padding: 1.85rem; display: flex; flex-direction: column; gap: 0.85rem; }
+    .arch-step-tag { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 0.25rem 0.6rem; border-radius: 6px; background: #FFFFFF; color: #00874e; border: 1px solid var(--border-subtle); align-self: flex-start; }
+    .arch-title { font-size: 1.1rem; font-weight: 800; color: var(--text-hero); }
+    .arch-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-body); }
+    .arch-list li { display: flex; align-items: center; gap: 0.45rem; }
+    .arch-list li::before { content: '↳'; color: var(--accent-mint); font-weight: bold; }
+
+    /* ==========================================================================
+       SCENE 5 · GALLERY — pinned horizontal scroll (photos + admin-system UI)
+       ========================================================================== */
+    .gallery-scene { height: 600vh; }
+    .gallery-stage { background: var(--ink); color: #fff; display: flex; align-items: center; }
+    .gallery-stage::before { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 50% at 20% 30%, rgba(0,240,144,0.12), transparent 70%), radial-gradient(50% 40% at 85% 80%, rgba(255,59,48,0.08), transparent 70%); }
+    .g-track { position: relative; display: flex; align-items: center; gap: 2.2vw; padding: 0 8vw; width: max-content; height: 100%; will-change: transform; }
+    .g-panel { position: relative; flex: 0 0 auto; height: 68vh; border-radius: 28px; overflow: hidden; width: min(48vw, 640px); }
+    .g-intro { width: min(44vw, 560px); display: flex; flex-direction: column; justify-content: center; overflow: visible; }
+    .g-intro .section-title { color: #fff; font-size: clamp(2.3rem, 4.4vw, 4.2rem); }
+    .g-intro .section-title em { color: var(--accent-mint); }
+    .g-intro .section-desc { color: rgba(255,255,255,0.65); }
+    .g-intro .section-eyebrow { color: var(--accent-mint); }
+    .g-arrow { margin-top: 1.8rem; font: 700 0.74rem var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-mint); display: flex; align-items: center; gap: 0.7rem; }
+    .g-arrow i { display: block; width: 60px; height: 1.5px; background: var(--accent-mint); transform-origin: 0 50%; animation: arrowPulse 2s ease-in-out infinite; }
+    @keyframes arrowPulse { 0%, 100% { transform: scaleX(0.4); } 50% { transform: scaleX(1); } }
+    .g-img { position: absolute; inset: -9%; will-change: transform; }
+    .g-img.photo { background: linear-gradient(135deg, #0d2238, #123a52); }
+    .g-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(8,17,30,0.88)); z-index: 2; pointer-events: none; }
+    .g-photo:hover .g-img img { scale: 1.07; }
+    .g-cap { position: absolute; left: 1.6rem; right: 1.6rem; bottom: 1.5rem; z-index: 3; }
+    .g-num { font: 800 0.72rem var(--font-mono); color: var(--accent-mint); letter-spacing: 0.12em; }
+    .g-cap h3 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(1.7rem, 2.6vw, 2.5rem); line-height: 1.05; letter-spacing: -0.02em; margin: 0.25rem 0; }
+    .g-cap p { font-size: 0.88rem; color: rgba(255,255,255,0.75); max-width: 440px; line-height: 1.5; }
+    .g-credit { position: absolute; top: 1.1rem; right: 1.2rem; z-index: 3; font: 700 0.6rem var(--font-mono); letter-spacing: 0.06em; padding: 0.25rem 0.6rem; border-radius: 999px; background: rgba(8,17,30,0.55); color: rgba(255,255,255,0.8); backdrop-filter: blur(6px); }
+    .g-ui { background: linear-gradient(160deg, #10233a, #0a1626); border: 1px solid var(--line-dark); padding: 1.6rem; display: flex; flex-direction: column; width: min(44vw, 560px); }
+    .gui-head { display: flex; justify-content: space-between; align-items: center; font: 800 0.72rem var(--font-mono); letter-spacing: 0.1em; color: var(--accent-mint); margin-bottom: 1rem; }
+    .gui-head b { color: #6c819a; font-weight: 700; letter-spacing: 0.04em; text-transform: lowercase; }
+    .gui-table { width: 100%; border-collapse: collapse; font: 600 0.78rem var(--font-mono); color: #cfdceb; }
+    .gui-table th { text-align: left; font-size: 0.62rem; color: #7f94ac; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--line-dark); }
+    .gui-table td { padding: 0.62rem 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .gui-table td.hi { color: #ff8a82; } .gui-table td.mid { color: #ffc070; }
+    .gui-sub { margin-top: auto; padding-top: 1rem; }
+    .gui-sub h3 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(1.6rem, 2.3vw, 2.2rem); color: #fff; line-height: 1.05; letter-spacing: -0.02em; }
+    .gui-sub p { font-size: 0.84rem; color: rgba(255,255,255,0.65); line-height: 1.5; margin-top: 0.3rem; }
+    .beds { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.45rem; margin-bottom: 1rem; }
+    .bed { aspect-ratio: 1; border-radius: 8px; background: rgba(255,255,255,0.08); position: relative; }
+    .bed.o { background: rgba(0,240,144,0.75); } .bed.w { background: var(--alert-amber); } .bed.x { background: var(--alert-rose); } .bed.c { background: rgba(255,255,255,0.22); }
+    .bed.x { animation: bedPulse 1.8s ease-in-out infinite; }
+    @keyframes bedPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+    .bed-legend { display: flex; flex-wrap: wrap; gap: 0.9rem; font: 700 0.62rem var(--font-mono); color: #9bb0c7; text-transform: uppercase; }
+    .bed-legend span::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 0.4rem; background: var(--k); vertical-align: -1px; }
+    .heat-grid.big { grid-template-columns: repeat(4, 1fr); gap: 0.55rem; margin-bottom: 1rem; }
+    .heat-grid.big .heat-tile { aspect-ratio: 1.35; font-size: 0.7rem; padding: 0.55rem 0.65rem; }
+    .heat-grid.big .heat-tile em { font-size: 1.3rem; }
+    .g-progress { position: absolute; left: 8vw; right: 8vw; bottom: 34px; height: 2px; background: rgba(255,255,255,0.12); z-index: 5; }
+    .g-progress i { display: block; height: 100%; width: 0; background: var(--accent-mint); box-shadow: 0 0 12px var(--mint-glow); }
+    .g-count { position: absolute; right: 8vw; bottom: 46px; z-index: 5; font: 700 0.72rem var(--font-mono); letter-spacing: 0.14em; color: rgba(255,255,255,0.7); }
+    .g-end { width: min(36vw, 440px); display: flex; flex-direction: column; justify-content: center; overflow: visible; }
+    .g-end h3 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(2rem, 3.4vw, 3.2rem); line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 1.2rem; }
+    .g-end h3 em { color: var(--accent-mint); }
+
+    /* ==========================================================================
+       SECTION 6 · IMPACT & ROADMAP
+       ========================================================================== */
+    .impact-layout { display: grid; grid-template-columns: 1.2fr 0.85fr; gap: 3rem; align-items: center; }
+    .big-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    .big-stat-box { border-radius: 20px; padding: 2.25rem; }
+    .big-stat-box.glass-card:hover { background: #FFFFFF; border-color: var(--accent-mint); }
+    .big-stat-val { font-family: var(--font-mono); font-size: 3.5rem; font-weight: 800; line-height: 1; color: #00874e; letter-spacing: -0.03em; margin-bottom: 0.5rem; font-variant-numeric: tabular-nums; }
+    .big-stat-name { font-size: 1rem; font-weight: 700; color: var(--text-hero); margin-bottom: 0.35rem; }
+    .big-stat-sub { font-size: 0.8rem; color: var(--text-muted); }
+    .roadmap-card { position: relative; background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: 20px; padding: 2rem 2rem 2rem 2.6rem; display: flex; flex-direction: column; gap: 1.5rem; box-shadow: 0 15px 35px rgba(11,23,39,0.04); }
+    .rm-rail { position: absolute; left: 1.35rem; top: 4.6rem; bottom: 2.4rem; width: 2px; background: var(--card-bg); border-radius: 2px; }
+    .rm-fill { position: absolute; inset: 0; background: linear-gradient(var(--accent-mint), #00C875); transform-origin: top; transform: scaleY(0); box-shadow: 0 0 12px var(--mint-glow); }
+    .roadmap-step { position: relative; display: flex; align-items: flex-start; gap: 0.85rem; font-size: 0.86rem; opacity: 0.5; transition: opacity 0.5s; }
+    .roadmap-step::before { content: ''; position: absolute; left: -1.62rem; top: 0.35rem; width: 10px; height: 10px; border-radius: 50%; background: #FFFFFF; border: 2px solid #CBD5E1; transition: all 0.4s; z-index: 1; }
+    .roadmap-step.lit { opacity: 1; }
+    .roadmap-step.lit::before { background: var(--accent-mint); border-color: #00C875; box-shadow: 0 0 0 5px rgba(0,240,144,0.2); }
+    .roadmap-step-badge { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 6px; background: var(--card-bg); color: var(--text-hero); flex-shrink: 0; }
+
+    /* ==========================================================================
+       SECTION 7 · SURGE SIMULATOR (logic unchanged)
+       ========================================================================== */
+    .simulator-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 3rem; align-items: center; }
+    .sim-card-controls { background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: 24px; padding: 2.5rem; box-shadow: 0 20px 45px rgba(11,23,39,0.05); }
+    .sim-slider-wrap { margin: 1.75rem 0; }
+    .sim-slider-label { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: 700; margin-bottom: 0.65rem; gap: 0.75rem; }
+    .sim-range { width: 100%; height: 8px; border-radius: 9999px; background: var(--card-bg); outline: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+    .sim-range::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-mint); border: 3px solid var(--text-hero); box-shadow: 0 0 12px var(--mint-glow); cursor: pointer; transition: transform 0.15s ease; }
+    .sim-range::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-mint); border: 3px solid var(--text-hero); cursor: pointer; }
+    .sim-range::-webkit-slider-thumb:hover { transform: scale(1.18); }
+    .sim-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .sim-kpi-card { background: var(--card-bg); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 1.75rem; position: relative; transition: all 0.3s; }
+    .sim-kpi-card.highlight { background: linear-gradient(135deg, rgba(0,240,144,0.14), #FFFFFF); border-color: rgba(0,240,144,0.55); box-shadow: 0 12px 28px rgba(0,240,144,0.1); }
+    .sim-kpi-card .num { transition: transform 0.35s var(--ease-bounce); display: inline-block; }
+    .sim-kpi-card .num.bump { transform: scale(1.14); }
+    .sim-delta-badge { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 9999px; background: var(--mint-subtle); color: #00874e; border: 1px solid rgba(0,240,144,0.4); display: inline-flex; align-items: center; gap: 0.3rem; }
+    .sim-heat-card { grid-column: 1 / -1; background: #0B1626; border-radius: 20px; padding: 1.4rem; color: #dbe7f3; }
+    .sim-heat-card .heat-grid { grid-template-columns: repeat(6, 1fr); }
+    .sim-heat-card .cn-panel-h { font: 700 0.66rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: #8ea4bc; margin-bottom: 0.7rem; display: flex; justify-content: space-between; }
+
+    /* ==========================================================================
+       SCENE 8 · FINALE — 3D ring carousel + giant zoom headline
+       ========================================================================== */
+    .finale-scene { height: 360vh; }
+    .finale-stage { background: radial-gradient(80% 70% at 50% 40%, #12304d 0%, var(--ink) 72%); color: #fff; }
+    .finale-copy { position: absolute; top: 0; left: 0; right: 0; z-index: 3; text-align: center; padding: 92px 1.5rem 0; will-change: transform, opacity; transform-origin: 50% 30%; }
+    .finale-eyebrow { font: 700 0.76rem var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-mint); margin-bottom: 0.6rem; }
+    .finale-title { font-family: var(--font-serif); font-weight: 400; font-size: clamp(2.6rem, 7.4vw, 7rem); line-height: 0.96; letter-spacing: -0.035em; text-shadow: 0 6px 50px rgba(8,17,30,0.9); }
+    .finale-cta { position: absolute; left: 0; right: 0; bottom: 8vh; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 1rem; text-align: center; padding: 0 1.5rem; opacity: 0; translate: 0 30px; }
+    .finale-cta p { font-size: 1.05rem; color: rgba(255,255,255,0.75); max-width: 560px; line-height: 1.55; }
+    .ring-wrap { position: absolute; left: 0; right: 0; top: 30%; bottom: 0; perspective: 1700px; will-change: transform, opacity; transform-origin: 50% 40%; }
+    .ring { position: absolute; left: 50%; top: 38%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(-9deg) rotateY(0deg); will-change: transform; --cw: 250px; --ch: 330px; --R: 400px; }
+    .ring-card { position: absolute; width: var(--cw); height: var(--ch); margin: calc(var(--ch) / -2) 0 0 calc(var(--cw) / -2); transform: rotateY(calc(var(--i) * 45deg)) translateZ(var(--R)); backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 30px 60px rgba(0,0,0,0.5); background: #0f2036; }
+    .ring-card .photo { position: absolute; inset: 0; }
+    .ring-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(8,17,30,0.85)); pointer-events: none; }
+    .ring-card span { position: absolute; left: 1rem; bottom: 0.9rem; right: 1rem; z-index: 2; font: 800 0.7rem var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; }
+    .ring-ui { padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(160deg, #10304a, #0a1626); }
+    .ring-ui::after { display: none; }
+    .ring-ui small { font: 700 0.62rem var(--font-mono); letter-spacing: 0.12em; color: #8ea4bc; text-transform: uppercase; }
+    .ring-ui strong { font: 800 3.6rem var(--font-mono); letter-spacing: -0.04em; line-height: 1; color: var(--accent-mint); }
+    .ring-ui strong.r { color: #ff7a72; } .ring-ui strong.a { color: #ffbf66; }
+    .ring-ui p { font-size: 0.78rem; color: #cfdceb; line-height: 1.45; }
+
+    /* Dock */
+    .jump-dock { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.94); border: 1px solid rgba(11,23,39,0.08); box-shadow: 0 15px 35px rgba(11,23,39,0.12), 0 0 0 1px rgba(0,0,0,0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 9999px; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 0.3rem; z-index: 850; }
+    .jump-btn { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-decoration: none; padding: 0.4rem 0.7rem; border-radius: 9999px; transition: all 0.15s ease; white-space: nowrap; }
+    .jump-btn:hover { color: var(--text-hero); background: var(--card-bg); }
+    .jump-btn.active { color: #042417; background: var(--accent-mint); box-shadow: 0 2px 8px var(--mint-glow); }
+
+    .site-footer { position: relative; z-index: 10; border-top: 1px solid var(--border-subtle); background: #FFFFFF; padding: 3rem 2rem 6rem; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+    .site-footer .credits { font-size: 0.72rem; color: var(--text-muted); max-width: 820px; margin: 0.9rem auto 0; line-height: 1.6; }
+    .site-footer .credits a { color: #00874e; }
+
+    /* ==========================================================================
+       RESPONSIVE
+       ========================================================================== */
+    @media (max-width: 992px) {
+      .hero-vitals-grid, .problem-layout, .pillars-grid, .arch-grid, .impact-layout, .simulator-layout, .arch-split { grid-template-columns: 1fr; gap: 2rem; }
+      .nav-links { display: none; }
+      .scroll-section { padding: 4rem 1.5rem; }
+      .jump-dock { width: calc(100% - 30px); overflow-x: auto; justify-content: flex-start; }
+      .hero-copy > .wrap { padding-top: 84px; }
+      .hero-subhead { font-size: 1rem; margin-bottom: 1.4rem; }
+      .hero-display { font-size: clamp(2.3rem, 9vw, 3.4rem); margin-bottom: 1rem; }
+      .panel-wrap { display: none; }
+      .cn-body { grid-template-columns: 1fr; } .cn-side { display: none; }
+      .cn-cols { grid-template-columns: 1fr; } .cn-kpis { grid-template-columns: repeat(2, 1fr); }
+      .pz-miles { grid-template-columns: repeat(2, 1fr); }
+      .arch-split { padding-top: 84px; align-content: center; gap: 0.5rem; }
+      .arch-caps { min-height: 130px; margin-top: 1rem; }
+      .arch-copy .section-desc { display: none; }
+      .stack-wrap { height: 40vh; }
+      .g-panel { width: 78vw; height: 62vh; } .g-intro, .g-ui, .g-end { width: 80vw; }
+      .usp-banner { flex-direction: column; align-items: flex-start; }
+      .ring { --cw: 170px; --ch: 230px; --R: 280px; }
+      .ring-ui strong { font-size: 2.4rem; }
+      .sim-heat-card .heat-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .big-stats-grid, .sim-kpi-grid { grid-template-columns: 1fr; }
+      .hero-scene .cascade-visual-box { padding: 1.4rem; }
+    }
+
+    /* Reduced motion: static, readable layouts (scene engine is not started) */
+    .reduce-motion .scene { height: auto !important; }
+    .reduce-motion .stage { position: relative; height: auto; min-height: 0; overflow: visible; }
+    .reduce-motion .hero-scene .stage { display: block; }
+    .reduce-motion .hero-bg, .reduce-motion .hero-veil { position: absolute; inset: 0; }
+    .reduce-motion .hero-dark, .reduce-motion .hero-caption, .reduce-motion .scroll-hint { display: none; }
+    .reduce-motion .hero-copy { position: relative; inset: auto; min-height: 100vh; }
+    .reduce-motion .hero-reveal { position: relative; inset: auto; opacity: 1; background: var(--ink); padding: 4rem 0; }
+    .reduce-motion .console-plane { transform: none; }
+    .reduce-motion .pz-frame { clip-path: none; position: absolute; } .reduce-motion .pz-photo { transform: none; }
+    .reduce-motion .problem-scene .stage { min-height: 100vh; display: block; } .reduce-motion .pz-ui { opacity: 1; position: relative; min-height: 100vh; }
+    .reduce-motion .arch-split { padding-bottom: 3rem; } .reduce-motion .arch-cap { position: relative; opacity: 1; translate: none; margin-bottom: 1rem; } .reduce-motion .arch-caps { min-height: 0; }
+    .reduce-motion .stack { transform: rotateX(60deg) rotateZ(-40deg); } .reduce-motion .stack-wrap { height: 460px; }
+    .reduce-motion .plane:nth-child(2) { transform: translateZ(75px); } .reduce-motion .plane:nth-child(3) { transform: translateZ(150px); }
+    .reduce-motion .gallery-stage { display: block; padding: 3rem 0; } .reduce-motion .g-track { transform: none !important; overflow-x: auto; width: 100%; height: auto; padding-bottom: 2rem; }
+    .reduce-motion .g-progress, .reduce-motion .g-count { display: none; }
+    .reduce-motion .finale-stage { min-height: 100vh; } .reduce-motion .finale-cta { opacity: 1; translate: none; }
+    .reduce-motion .marquee-track, .reduce-motion .mesh-orb, .reduce-motion .chip3d, .reduce-motion .loader { animation: none; }
+    .reduce-motion .loader { display: none; }
+
+    /* Print */
+    @media print {
+      .scroll-progress-line, .site-nav, .jump-dock, .ambient-mesh, .loader, .cursor, .cursor-dot, .scroll-hint { display: none !important; }
+      .scene { height: auto !important; }
+      .stage { position: relative !important; height: auto !important; min-height: 100vh; }
+      .reveal-item, .split .wi { opacity: 1 !important; translate: none !important; scale: 1 !important; transform: none !important; }
+      .scroll-section { padding: 2.5rem 0 !important; page-break-after: always !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loader -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <div class="loader-inner">
+      <svg class="loader-ecg" viewBox="0 0 320 60" aria-hidden="true"><path d="M0 32 H92 l8-5 8 5 H128 l7-28 9 54 9-36 6 10 H206 q11-13 24 0 H320"/></svg>
+      <div class="loader-count"><span id="loadNum">0</span><small>%</small></div>
+      <div class="loader-label">PULSEFLOW · INITIALISING CLINICAL FLOW ENGINE</div>
+    </div>
+  </div>
+
+  <!-- Cursor -->
+  <div class="cursor" id="cursor" aria-hidden="true"></div>
+  <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+
+  <!-- Top reading progress -->
+  <div id="scroll-progress" class="scroll-progress-line"></div>
+
+  <!-- Ambient mesh -->
+  <div class="ambient-mesh" aria-hidden="true">
+    <div class="mesh-orb mesh-orb-1"></div>
+    <div class="mesh-orb mesh-orb-2"></div>
+    <div class="mesh-orb mesh-orb-3"></div>
+  </div>
+
+  <!-- Floating nav -->
+  <nav id="site-nav" class="site-nav">
+    <a href="#hero" class="nav-brand">
+      <div class="brand-icon-pill">PF</div>
+      <span class="brand-title">PulseFlow</span>
+      <span class="status-badge live" style="font-size: 0.62rem; padding: 0.15rem 0.5rem;">
+        <span class="pulse-ring"></span> ACTIVE
+      </span>
+    </a>
+
+    <ul class="nav-links">
+      <li class="nav-link-item"><a href="#hero" class="nav-anchor active">Vision</a></li>
+      <li class="nav-link-item"><a href="#problem" class="nav-anchor">Problem</a></li>
+      <li class="nav-link-item"><a href="#solution" class="nav-anchor">Solution</a></li>
+      <li class="nav-link-item"><a href="#architecture" class="nav-anchor">Pipeline</a></li>
+      <li class="nav-link-item"><a href="#gallery" class="nav-anchor">Gallery</a></li>
+      <li class="nav-link-item"><a href="#impact" class="nav-anchor">Impact</a></li>
+      <li class="nav-link-item"><a href="#simulator" class="nav-anchor">Surge Engine</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <button onclick="window.print()" class="btn-nav-primary" style="background:#FFFFFF; color:var(--text-hero); border:1px solid var(--border-subtle); box-shadow:none;">
+        🖨️ PDF
+      </button>
+      <a href="/dashboard.html" class="btn-nav-primary magnetic">
+        Live Operations Console ↗
+      </a>
+    </div>
+  </nav>
+
+  <div class="scroll-container">
+
+    <!-- ====================================================================
+         SCENE 1: HERO — zoom through the corridor → 3D console rises
+         ==================================================================== -->
+    <div id="hero" class="scene hero-scene">
+      <div class="stage">
+
+        <div class="hero-bg" id="heroBg">
+          <div class="photo light">
+            <img src="https://images.unsplash.com/photo-1629410484397-a4dcd74088a0?auto=format&amp;fit=crop&amp;w=2000&amp;q=70" alt="Bright, empty hospital corridor receding into white light" fetchpriority="high" onload="this.classList.add('loaded')" onerror="this.style.display='none'">
+          </div>
+        </div>
+        <div class="hero-veil" id="heroVeil"></div>
+        <div class="hero-dark" id="heroDark"></div>
+
+        <!-- Phase A: original hero copy + ECG monitor -->
+        <div class="hero-copy" id="heroCopy">
+          <div class="wrap">
+            <div class="hero-vitals-grid">
+              <div>
+                <div class="hero-eyebrow reveal-item">
+                  Track 1 · Health — "The Forgotten Patient"
+                </div>
+
+                <h1 class="hero-display split">
+                  Turning Hospital Data into <em>Zero Forgotten</em> Patients.
+                </h1>
+
+                <p class="hero-subhead reveal-item delay-2">
+                  <strong>PulseFlow</strong> is an intelligent hospital-flow &amp; bottleneck prevention engine. We transform uncoordinated clinical handoffs into deterministic, sub-second interventions that eliminate patient journey bottlenecks before emergency saturation.
+                </p>
+
+                <div class="reveal-item delay-3" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+                  <a href="#problem" class="btn-nav-primary magnetic" style="padding: 0.85rem 1.75rem; font-size: 0.95rem;">
+                    Explore Narrative ↓
+                  </a>
+                  <a href="/dashboard.html" class="btn-nav-primary magnetic" style="background: var(--card-bg); color: var(--text-hero); border: 1px solid var(--border-subtle); box-shadow: none; padding: 0.85rem 1.5rem; font-size: 0.95rem;">
+                    Direct to Operations MVP ↗
+                  </a>
+                </div>
+              </div>
+
+              <div class="panel-wrap reveal-item delay-2" id="heroPanelWrap">
+                <div class="vitals-monitor-panel tilt">
+                  <div class="monitor-header">
+                    <span style="display: flex; align-items: center; gap: 0.45rem; font-weight: 800; color: var(--text-hero);">
+                      <span class="pulse-ring"></span> LIVE CLINICAL VITALS
+                    </span>
+                    <span style="font-size: 0.72rem; color: #00874e; font-weight: 700;">NORMAL SINUS CADENCE</span>
+                  </div>
+
+                  <canvas id="ecgCanvas" class="ecg-canvas"></canvas>
+
+                  <div class="vitals-stats-row">
+                    <div class="vitals-stat">
+                      <div class="vitals-stat-num" style="color: #00874e;">8,000</div>
+                      <div class="vitals-stat-label">Encounters Processed</div>
+                    </div>
+                    <div class="vitals-stat">
+                      <div class="vitals-stat-num" style="color: var(--alert-rose);">12</div>
+                      <div class="vitals-stat-label">Hospital Depts</div>
+                    </div>
+                    <div class="vitals-stat">
+                      <div class="vitals-stat-num" style="color: var(--alert-amber);">&lt; 5s</div>
+                      <div class="vitals-stat-label">Intervention SLA</div>
+                    </div>
+                  </div>
+                  <div class="glare"></div>
+                </div>
+
+                <div class="chip3d chip-a"><i></i>D01 EMERGENCY · 92%</div>
+                <div class="chip3d chip-b"><i></i>−35% AVOIDABLE DWELL</div>
+                <div class="chip3d chip-c"><i></i>&lt; 35MS INGESTION</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase B: dark stage with the 3D operations console -->
+        <div class="hero-caption" id="heroCaption">
+          <div class="cap-eyebrow">The Operations Console</div>
+          <div class="cap-title">One screen. Twelve departments. <em>Zero forgotten.</em></div>
+        </div>
+
+        <div class="hero-reveal" id="heroReveal" aria-label="Operations console preview">
+          <div class="console-plane" id="consolePlane">
+            <div class="cn-bar"><i></i><i></i><i></i><span>PulseFlow · Live Operations Console</span><b>● LIVE · sample data</b></div>
+            <div class="cn-body">
+              <aside class="cn-side"><u class="on">Overview</u><u>Action Queue</u><u>Heatmap</u><u>Root Cause</u><u>Audit Trail</u></aside>
+              <div class="cn-main">
+                <div class="cn-kpis">
+                  <div class="cn-kpi"><small>Encounters</small><strong class="m">8,000</strong></div>
+                  <div class="cn-kpi"><small>Overloaded depts</small><strong class="r">2</strong></div>
+                  <div class="cn-kpi"><small>Investigate first</small><strong class="a">18</strong></div>
+                  <div class="cn-kpi"><small>Triage SLA</small><strong class="m">&lt; 5s</strong></div>
+                </div>
+                <div class="cn-cols">
+                  <div class="cn-panel"><h6>Department load · D01–D12</h6><div class="heat-grid" data-heat="92,61,58,70,49,89,64,55,47,66,52,60"></div></div>
+                  <div class="cn-panel"><h6>Investigate first</h6>
+                    <div class="q-row"><code>E-4471</code><span>Radiology · capacity overload</span><i class="rk hi">96</i></div>
+                    <div class="q-row"><code>E-2208</code><span>Emergency · +52m over baseline</span><i class="rk hi">91</i></div>
+                    <div class="q-row"><code>E-6019</code><span>Lab result stalled 38m</span><i class="rk mid">84</i></div>
+                    <div class="q-row"><code>E-1337</code><span>Bed placement block</span><i class="rk mid">77</i></div>
+                  </div>
+                </div>
+                <div class="cn-foot">UI preview · illustrative data</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="scroll-hint" id="scrollHint"><span>Scroll</span><i></i></div>
+      </div>
+    </div>
+
+    <!-- Infinite marquee -->
+    <div class="marquee-wrapper" id="marquee">
+      <div class="marquee-skew" id="marqueeSkew">
+        <div class="marquee-track">
+          <div class="marquee-node"><span class="node-pill">TRACK 1 HEALTH:</span> "THE FORGOTTEN PATIENT"</div>
+          <div class="marquee-node"><span class="node-pill">EMERGENCY D01:</span> <span class="node-alert">92% CAPACITY LOAD</span></div>
+          <div class="marquee-node"><span class="node-pill">RADIOLOGY D06:</span> <span class="node-alert">89% SATURATION</span></div>
+          <div class="marquee-node"><span class="node-pill">DIAGNOSTIC TURNAROUND:</span> <span class="node-val">2.4X ACCELERATION</span></div>
+          <div class="marquee-node"><span class="node-pill">AVOIDABLE DWELL:</span> <span class="node-val">-35% REDUCTION</span></div>
+          <div class="marquee-node"><span class="node-pill">ALGORITHMIC LATENCY RESOLUTION:</span> &lt; 35MS INGESTION</div>
+          <div class="marquee-node"><span class="node-pill">TRACK 1 HEALTH:</span> "THE FORGOTTEN PATIENT"</div>
+          <div class="marquee-node"><span class="node-pill">EMERGENCY D01:</span> <span class="node-alert">92% CAPACITY LOAD</span></div>
+          <div class="marquee-node"><span class="node-pill">RADIOLOGY D06:</span> <span class="node-alert">89% SATURATION</span></div>
+          <div class="marquee-node"><span class="node-pill">DIAGNOSTIC TURNAROUND:</span> <span class="node-val">2.4X ACCELERATION</span></div>
+          <div class="marquee-node"><span class="node-pill">AVOIDABLE DWELL:</span> <span class="node-val">-35% REDUCTION</span></div>
+          <div class="marquee-node"><span class="node-pill">ALGORITHMIC LATENCY RESOLUTION:</span> &lt; 35MS INGESTION</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 2: PROBLEM — "Hour 0" zoom-out scene + original content
+         ==================================================================== -->
+    <div id="problem">
+
+      <div class="scene problem-scene" id="pzScene">
+        <div class="stage">
+          <div class="pz-frame" id="pzFrame">
+            <div class="pz-photo" id="pzPhoto">
+              <div class="photo">
+                <img src="https://images.unsplash.com/photo-1517120026326-d87759a7b63b?auto=format&amp;fit=crop&amp;w=2000&amp;q=70" alt="A clinician in blue scrubs walking down a hospital hallway" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.style.display='none'">
+              </div>
+            </div>
+            <div class="pz-shade"></div>
+          </div>
+          <div class="pz-ui" id="pzUi">
+            <div class="pz-eyebrow">Hour 0 · Bed 14 · Waiting for a result</div>
+            <div class="pz-timer" id="pzTimer">04:20</div>
+            <div class="pz-sub">…and nobody knows.</div>
+            <ul class="pz-miles" id="pzMiles">
+              <li data-at="25"><b>+25m</b><span>Routine blood test latency</span></li>
+              <li data-at="75"><b>+75m</b><span>Deferred attending physician review</span></li>
+              <li data-at="160"><b>+160m</b><span>Inpatient bed placement block</span></li>
+              <li data-at="260" class="l3"><b>+260m</b><span>ER gridlock &amp; left-without-care</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <section class="scroll-section">
+        <div class="section-header reveal-item">
+          <div class="section-eyebrow">The Root Cause &amp; Operational Reality</div>
+          <h2 class="section-title split">
+            Operational Blindness Creates the <em>"Forgotten Patient"</em>
+          </h2>
+          <p class="section-desc">
+            Patients don't get forgotten because clinical staff don't care — they get forgotten because hospital IT systems trap information within departmental silos.
+          </p>
+        </div>
+
+        <div class="problem-layout">
+          <div class="pain-cards-stack reveal-item delay-1">
+            <div class="pain-card">
+              <div class="pain-idx">PAIN POINT 01</div>
+              <div class="pain-heading">Department Silos &amp; Blind Handoffs</div>
+              <div class="pain-text">
+                Zero cross-visibility between triage, inpatient wards, and diagnostic labs. When a blood test or MRI stalls, ward coordinators remain completely unaware until patients complain or deteriorate.
+              </div>
+            </div>
+
+            <div class="pain-card">
+              <div class="pain-idx">PAIN POINT 02</div>
+              <div class="pain-heading">Compounding Non-Linear Latencies</div>
+              <div class="pain-text">
+                A minor 25-minute delay in a stat laboratory test spirals into a 4+ hour emergency department bed block and ambulance bypass condition downstream.
+              </div>
+            </div>
+
+            <div class="pain-card">
+              <div class="pain-idx">PAIN POINT 03</div>
+              <div class="pain-heading">Reactive, Retrospective Reporting</div>
+              <div class="pain-text">
+                Traditional EHR reporting and retrospective dashboards analyze dwell times hours or days after patients suffered, rather than triggering interventions while they are still waiting in the hall.
+              </div>
+            </div>
+          </div>
+
+          <div class="cascade-visual-box reveal-item delay-2 tilt">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; font-family: var(--font-mono); color: var(--text-hero);">
+                The Compounding Delay Cascade
+              </span>
+              <span class="status-badge" style="background: var(--rose-subtle); color: var(--alert-rose); font-size: 0.65rem;">
+                EXPONENTIAL SPREAD
+              </span>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+              Data-backed visualization of how unmonitored diagnostic handoffs expand dwell time:
+            </p>
+
+            <div class="cascade-stage">
+              <div class="cascade-header">
+                <span>1. Routine Blood Test Latency</span>
+                <strong style="color: #00874e;">+25 mins</strong>
+              </div>
+              <div class="cascade-bar"><div class="cascade-fill" style="--w: 20%; background: var(--accent-mint);"></div></div>
+            </div>
+
+            <div class="cascade-stage">
+              <div class="cascade-header">
+                <span>2. Deferred Attending Physician Review</span>
+                <strong style="color: var(--alert-amber);">+75 mins</strong>
+              </div>
+              <div class="cascade-bar"><div class="cascade-fill" style="--w: 48%; background: var(--alert-amber);"></div></div>
+            </div>
+
+            <div class="cascade-stage">
+              <div class="cascade-header">
+                <span>3. Inpatient Bed Placement Block</span>
+                <strong style="color: #ea580c;">+160 mins</strong>
+              </div>
+              <div class="cascade-bar"><div class="cascade-fill" style="--w: 75%; background: #ea580c;"></div></div>
+            </div>
+
+            <div class="cascade-stage">
+              <div class="cascade-header">
+                <span>4. Acute Emergency Room Gridlock &amp; Left-Without-Care</span>
+                <strong style="color: var(--alert-rose);">+260 mins (4.3 hrs)</strong>
+              </div>
+              <div class="cascade-bar"><div class="cascade-fill" style="--w: 100%; background: var(--alert-rose);"></div></div>
+            </div>
+
+            <div class="stat-callout-card">
+              <div class="stat-callout-quote">
+                "Over 68% of hospital dwell-time spikes originate from unmonitored diagnostic handoffs."
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 0.4rem;">
+                Analysis of 8,000 Datathon Encounters Across 12 Departments
+              </div>
+            </div>
+            <div class="glare"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 3: SOLUTION
+         ==================================================================== -->
+    <section id="solution" class="scroll-section">
+      <div class="section-header reveal-item">
+        <div class="section-eyebrow">Our Solution Paradigm</div>
+        <h2 class="section-title split">
+          PulseFlow — Decision Support, <em>Not Just a Dashboard</em>
+        </h2>
+        <p class="section-desc">
+          We don't simply plot passive charts. PulseFlow computes a prescriptive operational action plan for every patient in the queue.
+        </p>
+      </div>
+
+      <div class="pillars-grid">
+        <div class="pillar-card glass-card tilt reveal-item delay-1">
+          <div>
+            <div class="pillar-num">01</div>
+            <div class="pillar-title">Live Capacity &amp; Dwell Engine</div>
+            <p class="pillar-desc">
+              Continuous throughput surveillance across all 12 operational hospital departments. Dynamically calculates bed and staff capacity utilization, triggering instant overload warnings when saturation reaches &gt;85%.
+            </p>
+            <div class="mini">
+              <span class="mini-tag">UI preview</span>
+              <div class="bar-row"><em>D01 Emergency</em><u><i class="hi" style="--w:92%"></i></u><b>92%</b></div>
+              <div class="bar-row"><em>D06 Radiology</em><u><i class="hi" style="--w:89%"></i></u><b>89%</b></div>
+              <div class="bar-row"><em>D03</em><u><i style="--w:58%"></i></u><b>58%</b></div>
+            </div>
+          </div>
+          <div class="pillar-foot">✓ All 12 Departments Normalized</div>
+          <div class="glare"></div>
+        </div>
+
+        <div class="pillar-card glass-card tilt reveal-item delay-2">
+          <div>
+            <div class="pillar-num">02</div>
+            <div class="pillar-title">"Investigate First" Action Queue</div>
+            <p class="pillar-desc">
+              Algorithmic prioritization ranking every encounter by composite risk score: (Wait Time - Dept Baseline) + Diagnostic Latency Penalty + Department Overload Multiplier. Surfaces forgotten patients instantly.
+            </p>
+            <div class="mini">
+              <span class="mini-tag">UI preview</span>
+              <div class="q-row"><code>E-4471</code><span>Radiology overload</span><i class="rk hi">96</i></div>
+              <div class="q-row"><code>E-2208</code><span>Emergency +52m</span><i class="rk hi">91</i></div>
+              <div class="q-row"><code>E-6019</code><span>Lab stalled 38m</span><i class="rk mid">84</i></div>
+            </div>
+          </div>
+          <div class="pillar-foot">✓ Real-Time Composite Risk Index</div>
+          <div class="glare"></div>
+        </div>
+
+        <div class="pillar-card glass-card tilt reveal-item delay-3">
+          <div>
+            <div class="pillar-num">03</div>
+            <div class="pillar-title">Explainable Root-Cause Drawer</div>
+            <p class="pillar-desc">
+              Zero black-box ambiguity. Clicking any flagged encounter provides charge nurses with plain-English diagnostic breakdowns (e.g., <em>"74m dwell caused by Radiology capacity overload at 92%"</em>) and 1-click dispatch.
+            </p>
+            <div class="mini">
+              <span class="mini-tag">UI preview</span>
+              <div class="dr-h">E-4471 · RADIOLOGY</div>
+              <p>74m dwell caused by Radiology capacity overload at 92%.</p>
+              <span class="dr-btn">Dispatch float nurse →</span>
+            </div>
+          </div>
+          <div class="pillar-foot">✓ 1-Click Operational Escalation</div>
+          <div class="glare"></div>
+        </div>
+      </div>
+
+      <div class="usp-banner reveal-item delay-2 zoom-in">
+        <div>
+          <div class="usp-title">Core Unique Selling Proposition</div>
+          <div class="usp-quote">
+            "Zero Black Box: Gives hospital charge nurses and bed coordinators the exact 'Why' and actionable next steps in 5 seconds."
+          </div>
+        </div>
+        <div class="status-badge" style="background: #08111E; color: var(--accent-mint); padding: 0.6rem 1.25rem; font-size: 0.8rem; white-space: nowrap;">
+          CLINICALLY ACTIONABLE
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 4: ARCHITECTURE — exploded 3D layers + original cards
+         ==================================================================== -->
+    <div id="architecture">
+      <div class="scene arch-scene" id="archScene">
+        <div class="stage arch-stage">
+          <div class="arch-split">
+            <div class="arch-copy">
+              <div class="section-eyebrow">Enterprise Data Engineering</div>
+              <h2 class="section-title split">
+                Powered Directly by <em>Operational Hospital Data</em>
+              </h2>
+              <p class="section-desc">
+                Engineered for extreme reliability, zero latency, and sub-second deterministic calculations across massive datasets.
+              </p>
+              <div class="arch-caps">
+                <div class="arch-cap on" data-i="0"><span class="step">01 · Ingestion</span><h4>Raw Clinical Sources</h4><p>patients.csv, encounters.csv, departments.csv and diagnostic_tests.csv stream in with triple-redundancy fallback and zero data loss.</p></div>
+                <div class="arch-cap" data-i="1"><span class="step">02 · Analytics</span><h4>Flow Intelligence Engine</h4><p>Wait deviation, rolling utilization, diagnostic latency and acuity weights — scored deterministically with O(1) indexed lookups.</p></div>
+                <div class="arch-cap" data-i="2"><span class="step">03 · Action Surface</span><h4>Operations Console</h4><p>The priority queue, overload heatmap and root-cause drawer turn scores into a next step a charge nurse can take in 5 seconds.</p></div>
+              </div>
+              <div class="arch-dots"><i class="on"></i><i></i><i></i></div>
+            </div>
+
+            <div class="stack-wrap" aria-hidden="true">
+              <div class="stack" id="stack">
+                <div class="beams"><span class="beam"></span><span class="beam"></span><span class="beam"></span><span class="beam"></span></div>
+                <div class="plane" data-i="0">
+                  <span class="plane-tag">01 · Ingestion</span>
+                  <ul>
+                    <li class="bar"><span>patients.csv <b>2,000</b></span><s style="--w:25%"></s></li>
+                    <li class="bar"><span>encounters.csv <b>8,000</b></span><s style="--w:100%"></s></li>
+                    <li class="bar"><span>departments.csv <b>12</b></span><s style="--w:8%"></s></li>
+                    <li class="bar"><span>diagnostic_tests.csv <b>5k</b></span><s style="--w:62%"></s></li>
+                  </ul>
+                </div>
+                <div class="plane" data-i="1">
+                  <span class="plane-tag">02 · Analytics</span>
+                  <ul>
+                    <li><span>Wait deviation</span><b>ΔW</b></li>
+                    <li><span>Rolling utilization</span><b>%</b></li>
+                    <li><span>Diagnostic latency</span><b>P_diag</b></li>
+                    <li><span>Acuity risk weights</span><b>w</b></li>
+                  </ul>
+                </div>
+                <div class="plane" data-i="2">
+                  <span class="plane-tag">03 · Action Surface</span>
+                  <ul>
+                    <li class="r"><span>E-4471 · Radiology</span><b>96</b></li>
+                    <li class="r"><span>E-2208 · Emergency</span><b>91</b></li>
+                    <li><span>E-6019 · Lab</span><b>84</b></li>
+                    <li><span>E-1337 · Beds</span><b>77</b></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="scroll-section" style="padding-top: 2rem;">
+        <div class="arch-grid">
+          <div class="arch-card glass-card tilt reveal-item delay-1">
+            <span class="arch-step-tag">01 · Ingestion</span>
+            <div class="arch-title">Raw Clinical Sources</div>
+            <ul class="arch-list">
+              <li>patients.csv (2,000)</li>
+              <li>encounters.csv (8,000)</li>
+              <li>departments.csv (12)</li>
+              <li>diagnostic_tests.csv (5k)</li>
+            </ul>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: auto;">
+              Triple-redundancy streaming fallback with zero data loss.
+            </div>
+            <div class="glare"></div>
+          </div>
+
+          <div class="arch-card glass-card tilt reveal-item delay-2">
+            <span class="arch-step-tag">02 · Analytics</span>
+            <div class="arch-title">Flow Intelligence Engine</div>
+            <ul class="arch-list">
+              <li>Wait deviation (ΔW)</li>
+              <li>Rolling utilization (%)</li>
+              <li>Diagnostic latency (P_diag)</li>
+              <li>Acuity risk weights</li>
+            </ul>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: auto;">
+              Deterministic scoring with O(1) indexed hash lookups.
+            </div>
+            <div class="glare"></div>
+          </div>
+
+          <div class="arch-card glass-card tilt reveal-item delay-3">
+            <span class="arch-step-tag">03 · Action Surface</span>
+            <div class="arch-title">Operations Console</div>
+            <ul class="arch-list">
+              <li>Priority Action Queue</li>
+              <li>Overload Heatmap Grid</li>
+              <li>Root-Cause Drawer</li>
+              <li>Session audit trail</li>
+            </ul>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: auto;">
+              Interactive search, filtering, and instant CSV exports.
+            </div>
+            <div class="glare"></div>
+          </div>
+
+          <div class="arch-card glass-card tilt reveal-item delay-4" style="border-color: rgba(0, 240, 144, 0.5); background: linear-gradient(135deg, rgba(0, 240, 144, 0.1), var(--card-bg));">
+            <span class="arch-step-tag" style="background: var(--accent-mint); color: #042417;">04 · Tech Stack</span>
+            <div class="arch-title">Engineered to Scale</div>
+            <ul class="arch-list">
+              <li>React 18 / Vite</li>
+              <li>Vanilla CSS / Tailwind</li>
+              <li>PapaParse streaming</li>
+              <li>Zero-dependency server</li>
+            </ul>
+            <div style="font-size: 0.72rem; color: #00874e; font-weight: 700; margin-top: auto;">
+              Ready for ML wait forecasting &amp; EHR FHIR integration.
+            </div>
+            <div class="glare"></div>
+          </div>
+        </div>
+
+        <div class="reveal-item delay-2" style="background: #FFFFFF; border: 1px solid var(--border-subtle); border-radius: 16px; padding: 1.25rem 2rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; font-size: 0.85rem;">
+          <div style="display: flex; align-items: center; gap: 0.85rem;">
+            <span class="brand-icon-pill" style="width: 30px; height: 30px; font-size: 0.85rem;">⚡</span>
+            <span><strong>Performance Benchmark:</strong> Complete ingestion, joining, and ranking of all 8,000 encounters executes in <strong>&lt; 35 milliseconds</strong>.</span>
+          </div>
+          <span class="status-badge live" style="font-size: 0.7rem;">OFFLINE CAPABLE · ZERO NETWORK BOTTLENECKS</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- ====================================================================
+         SCENE 5: GALLERY — pinned horizontal scroll
+         ==================================================================== -->
+    <div id="gallery" class="scene gallery-scene">
+      <div class="stage gallery-stage">
+        <div class="g-track" id="gTrack">
+
+          <article class="g-panel g-intro">
+            <div class="section-eyebrow">Inside the hospital · Inside the data</div>
+            <h2 class="section-title">Every forgotten patient is a moment <em>between systems.</em></h2>
+            <p class="section-desc">Real wards and the administration tools that should be watching them. Keep scrolling.</p>
+            <div class="g-arrow"><i></i> Scroll to explore</div>
+          </article>
+
+          <article class="g-panel g-photo">
+            <div class="photo g-img"><img src="https://images.unsplash.com/photo-1513224502586-d1e602410265?auto=format&amp;fit=crop&amp;w=1600&amp;q=70" alt="Patient monitor showing green vital-sign waveforms" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div>
+            <span class="g-credit">Jair Lázaro · Unsplash</span>
+            <div class="g-cap"><span class="g-num">01 / 08</span><h3>Vitals stream in. Flow signals never did.</h3><p>Telemetry watches the body. PulseFlow watches the queue around it.</p></div>
+          </article>
+
+          <article class="g-panel g-ui" aria-label="Encounter board preview">
+            <div class="gui-head"><span>ENCOUNTER BOARD</span><b>ui preview · sample data</b></div>
+            <table class="gui-table">
+              <thead><tr><th>Enc</th><th>Dept</th><th>Wait</th><th>Δ base</th><th>Risk</th></tr></thead>
+              <tbody>
+                <tr><td>E-4471</td><td>D06</td><td>74m</td><td class="hi">+52</td><td><i class="rk hi">96</i></td></tr>
+                <tr><td>E-2208</td><td>D01</td><td>96m</td><td class="hi">+61</td><td><i class="rk hi">91</i></td></tr>
+                <tr><td>E-6019</td><td>D07</td><td>58m</td><td class="mid">+31</td><td><i class="rk mid">84</i></td></tr>
+                <tr><td>E-1337</td><td>D03</td><td>47m</td><td class="mid">+22</td><td><i class="rk mid">77</i></td></tr>
+                <tr><td>E-3560</td><td>D09</td><td>29m</td><td>+6</td><td><i class="rk lo">41</i></td></tr>
+                <tr><td>E-0912</td><td>D12</td><td>18m</td><td>−2</td><td><i class="rk lo">22</i></td></tr>
+              </tbody>
+            </table>
+            <div class="gui-sub"><h3>The EHR board, ranked by risk.</h3><p>Every encounter scored against its department baseline.</p></div>
+          </article>
+
+          <article class="g-panel g-photo">
+            <div class="photo g-img"><img src="https://images.unsplash.com/photo-1516841273335-e39b37888115?auto=format&amp;fit=crop&amp;w=1600&amp;q=70" alt="A group of doctors walking along a hospital hallway" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div>
+            <span class="g-credit">Luis Melendez · Unsplash</span>
+            <div class="g-cap"><span class="g-num">03 / 08</span><h3>Handoffs happen in hallways.</h3><p>And whatever isn't said in the hallway gets lost between departments.</p></div>
+          </article>
+
+          <article class="g-panel g-ui" aria-label="Bed management board preview">
+            <div class="gui-head"><span>BED MANAGEMENT BOARD</span><b>ui preview · sample data</b></div>
+            <div class="beds" data-beds="40"></div>
+            <div class="bed-legend"><span style="--k:rgba(0,240,144,.75)">Occupied</span><span style="--k:#FF9F1C">Waiting on result</span><span style="--k:#FF3B30">Blocked</span><span style="--k:rgba(255,255,255,.22)">Cleaning</span><span style="--k:rgba(255,255,255,.08)">Free</span></div>
+            <div class="gui-sub"><h3>Blocked beds, flagged before they block.</h3><p>Bed coordinators see the stall while the patient is still in the hall.</p></div>
+          </article>
+
+          <article class="g-panel g-photo">
+            <div class="photo g-img"><img src="https://images.unsplash.com/photo-1777269749032-d8d458ae594d?auto=format&amp;fit=crop&amp;w=1600&amp;q=70" alt="An empty hospital corridor with benches and doors" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div>
+            <span class="g-credit">Tasha Kostyuk · Unsplash</span>
+            <div class="g-cap"><span class="g-num">05 / 08</span><h3>Where patients wait, unseen.</h3><p>The benches by the doors are where a delay becomes a forgotten patient.</p></div>
+          </article>
+
+          <article class="g-panel g-photo">
+            <div class="photo g-img"><img src="https://images.unsplash.com/photo-1504439468489-c8920d796a29?auto=format&amp;fit=crop&amp;w=1600&amp;q=70" alt="Surgical team in scrubs inside an operating room" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div>
+            <span class="g-credit">Piron Guillaume · Unsplash</span>
+            <div class="g-cap"><span class="g-num">06 / 08</span><h3>Theatres depend on every upstream result.</h3><p>One stalled lab or scan quietly delays the next procedure in line.</p></div>
+          </article>
+
+          <article class="g-panel g-ui" aria-label="Capacity heatmap preview">
+            <div class="gui-head"><span>CAPACITY HEATMAP · D01–D12</span><b>ui preview · sample data</b></div>
+            <div class="heat-grid big" data-heat="92,61,58,70,49,89,64,55,47,66,52,60"></div>
+            <div class="bed-legend"><span style="--k:#00F090">&lt; 60%</span><span style="--k:#B8F26B">60–79%</span><span style="--k:#FF9F1C">80–89%</span><span style="--k:#FF3B30">≥ 90%</span></div>
+            <div class="gui-sub"><h3>Overload, at a glance.</h3><p>Emergency (D01) and Radiology (D06) light up before the queue does.</p></div>
+          </article>
+
+          <article class="g-panel g-photo">
+            <div class="photo g-img"><img src="https://images.unsplash.com/photo-1648224395277-052c8108efa3?auto=format&amp;fit=crop&amp;w=1600&amp;q=70" alt="Hospital room with a monitor and medical equipment" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div>
+            <span class="g-credit">Annie Spratt · Unsplash</span>
+            <div class="g-cap"><span class="g-num">08 / 08</span><h3>Ward capacity, one glance away.</h3><p>Rooms, staff and equipment — measured continuously, not retrospectively.</p></div>
+          </article>
+
+          <article class="g-panel g-end">
+            <h3>See it running on <em>8,000 real encounters.</em></h3>
+            <a href="/dashboard.html" class="btn-nav-primary magnetic" style="align-self:flex-start; padding: 0.9rem 1.7rem; font-size: 0.95rem;">Launch Live Operations Console ↗</a>
+          </article>
+        </div>
+
+        <div class="g-progress"><i id="gBar"></i></div>
+        <div class="g-count" id="gCount">01 / 09</div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 6: IMPACT & ROADMAP
+         ==================================================================== -->
+    <section id="impact" class="scroll-section">
+      <div class="section-header reveal-item">
+        <div class="section-eyebrow">Measurable Clinical Impact</div>
+        <h2 class="section-title split">
+          Working MVP Today, <em>Scalable Hospital Standard</em> Tomorrow
+        </h2>
+        <p class="section-desc">
+          PulseFlow produces tangible clinical and financial returns from Day 1 of deployment.
+        </p>
+      </div>
+
+      <div class="impact-layout">
+        <div>
+          <div class="big-stats-grid">
+            <div class="big-stat-box glass-card tilt reveal-item delay-1 zoom-in">
+              <div class="big-stat-val" data-count="35" data-prefix="-" data-suffix="%">-35%</div>
+              <div class="big-stat-name">Avoidable Dwell Time</div>
+              <div class="big-stat-sub">Reduces unnecessary waiting-room stagnation via real-time triage redirection.</div>
+              <div class="glare"></div>
+            </div>
+
+            <div class="big-stat-box glass-card tilt reveal-item delay-2 zoom-in">
+              <div class="big-stat-val" data-count="2.4" data-decimals="1" data-suffix="x">2.4x</div>
+              <div class="big-stat-name">Faster Lab Escalation</div>
+              <div class="big-stat-sub">Surfaces overdue diagnostic handoffs before attending physician rounds.</div>
+              <div class="glare"></div>
+            </div>
+          </div>
+
+          <div class="glass-card tilt reveal-item delay-2" style="border-color: rgba(0, 240, 144, 0.5); background: linear-gradient(135deg, rgba(0, 240, 144, 0.12), #FFFFFF);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 1rem;">
+              <span class="status-badge live">PRODUCTION PROTOTYPE READY</span>
+              <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">HOST: PORT 3000</span>
+            </div>
+            <h4 style="font-size: 1.2rem; font-weight: 800; color: var(--text-hero); margin-bottom: 0.4rem;">
+              Explore the Full Clinical Operations Console
+            </h4>
+            <p style="font-size: 0.88rem; color: var(--text-body); margin-bottom: 1.25rem;">
+              Experience the 12-department live heatmap, priority action queue with multi-filters, patient root-cause drawer, and 1-click priority queue CSV export.
+            </p>
+            <a href="/dashboard.html" class="btn-nav-primary magnetic" style="display: inline-flex; width: 100%; justify-content: center; padding: 0.85rem; font-size: 0.95rem;">
+              Launch Live Operations Console ↗
+            </a>
+            <div class="glare"></div>
+          </div>
+        </div>
+
+        <div class="roadmap-card reveal-item delay-2" id="roadmap">
+          <div class="rm-rail"><div class="rm-fill" id="rmFill"></div></div>
+          <div style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 800; text-transform: uppercase; color: var(--text-hero); margin-bottom: 0.25rem;">
+            🚀 Product Roadmap (Round 2 &amp; Production)
+          </div>
+
+          <div class="roadmap-step">
+            <span class="roadmap-step-badge">PHASE 1</span>
+            <div>
+              <strong>Round 1 (Delivered):</strong> Complete heuristic bottleneck detection, risk ranking, and explainability side-panel.
+            </div>
+          </div>
+
+          <div class="roadmap-step">
+            <span class="roadmap-step-badge" style="background: var(--mint-subtle); color: #00874e;">PHASE 2</span>
+            <div>
+              <strong>Predictive ML Regression:</strong> Machine-learning models forecasting patient wait-time escalation 45 minutes in advance.
+            </div>
+          </div>
+
+          <div class="roadmap-step">
+            <span class="roadmap-step-badge">PHASE 3</span>
+            <div>
+              <strong>Automated Staff Reallocation:</strong> Automated surge pager dispatch to float nurses when departments breach 85% capacity.
+            </div>
+          </div>
+
+          <div class="roadmap-step">
+            <span class="roadmap-step-badge">PHASE 4</span>
+            <div>
+              <strong>FHIR / Epic / Cerner Integration:</strong> Bi-directional interoperability connecting directly into hospital EHR systems.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION 7: SURGE SIMULATOR
+         ==================================================================== -->
+    <section id="simulator" class="scroll-section">
+      <div class="section-header reveal-item">
+        <div class="section-eyebrow">Advanced Heuristic USP · Proactive De-escalation</div>
+        <h2 class="section-title split">
+          Intelligent Surge Reallocation: <em>Autonomous Bottleneck Relief</em>
+        </h2>
+        <p class="section-desc">
+          Our algorithm continuously evaluates chronic department saturation and simulates the immediate impact of deploying floating clinical resources. Only positive, restorative outcomes are generated.
+        </p>
+      </div>
+
+      <div class="simulator-layout">
+        <div class="sim-card-controls reveal-item delay-1">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap;">
+            <span class="status-badge" style="background: var(--amber-subtle); color: var(--alert-amber);">
+              CHRONIC SURGE DETECTED
+            </span>
+            <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">
+              Emergency (D01) &amp; Radiology (D06)
+            </span>
+          </div>
+
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-hero); margin: 0.85rem 0 0.4rem 0;">
+            Surge Staff &amp; Bed Reallocation Engine
+          </h3>
+          <p style="font-size: 0.84rem; color: var(--text-body); line-height: 1.5;">
+            Move the slider to inject floating nurse escorts and temporary telemetry beds into overburdened departments:
+          </p>
+
+          <div class="sim-slider-wrap">
+            <div class="sim-slider-label">
+              <span>Resource Allocation:</span>
+              <span id="slider-label-text" style="font-family: var(--font-mono); color: #00874e; font-size: 0.85rem; text-align: right;">
+                +3 Float Nurses &amp; +6 Relief Beds
+              </span>
+            </div>
+
+            <input
+              type="range"
+              id="surgeSlider"
+              class="sim-range"
+              min="0"
+              max="4"
+              value="3"
+              step="1"
+              oninput="sim.update(this.value)"
+              aria-label="Surge resource allocation"
+            >
+
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-muted); margin-top: 0.4rem; gap: 0.25rem;">
+              <span>Baseline (Overloaded)</span>
+              <span>Minimal (+1)</span>
+              <span>Moderate (+2)</span>
+              <span>Optimal (+3)</span>
+              <span>Max Surge (+4)</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.65rem;">
+            <button onclick="sim.setPreset(0)" class="btn-nav-primary" style="flex:1; justify-content:center; background:var(--card-bg); color:var(--text-hero); box-shadow:none; border:1px solid var(--border-subtle); font-size:0.78rem;">
+              View Baseline (Overloaded)
+            </button>
+            <button onclick="sim.setPreset(3)" class="btn-nav-primary" style="flex:1; justify-content:center; font-size:0.78rem;">
+              Apply Surge (+3)
+            </button>
+          </div>
+        </div>
+
+        <div class="sim-kpi-grid reveal-item delay-2">
+          <div class="sim-kpi-card highlight">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 0.5rem;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                Department Saturation
+              </span>
+              <span id="sim-util-badge" class="sim-delta-badge">
+                ↓ -26% Drop
+              </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.6rem;">
+              <span id="sim-util-val" class="num" style="font-size: 2.6rem; font-weight: 800; font-family: var(--font-mono); color: #00874e; line-height: 1;">
+                66%
+              </span>
+              <span style="font-size: 0.82rem; color: var(--text-muted); text-decoration: line-through;">
+                92% Baseline
+              </span>
+            </div>
+            <div style="font-size: 0.78rem; color: #00874e; font-weight: 600; margin-top: 0.5rem;">
+              ✓ Emergency restored to Safe Clinical Buffer
+            </div>
+          </div>
+
+          <div class="sim-kpi-card highlight">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 0.5rem;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                Average Patient Wait
+              </span>
+              <span id="sim-wait-badge" class="sim-delta-badge">
+                ↓ -42m Saved
+              </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.6rem;">
+              <span id="sim-wait-val" class="num" style="font-size: 2.6rem; font-weight: 800; font-family: var(--font-mono); color: #00874e; line-height: 1;">
+                26m
+              </span>
+              <span style="font-size: 0.82rem; color: var(--text-muted); text-decoration: line-through;">
+                68m Baseline
+              </span>
+            </div>
+            <div style="font-size: 0.78rem; color: #00874e; font-weight: 600; margin-top: 0.5rem;">
+              ✓ Well within &lt;30m Target Clinical Quality SLA
+            </div>
+          </div>
+
+          <div class="sim-kpi-card highlight">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 0.5rem;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                Critical Forgotten Patients
+              </span>
+              <span id="sim-forgotten-badge" class="sim-delta-badge">
+                100% Cleared
+              </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.6rem;">
+              <span id="sim-forgotten-val" class="num" style="font-size: 2.6rem; font-weight: 800; font-family: var(--font-mono); color: #00874e; line-height: 1;">
+                0
+              </span>
+              <span style="font-size: 0.82rem; color: var(--text-muted); text-decoration: line-through;">
+                18 At Risk
+              </span>
+            </div>
+            <div style="font-size: 0.78rem; color: #00874e; font-weight: 600; margin-top: 0.5rem;">
+              ✓ Zero unmonitored critical outliers
+            </div>
+          </div>
+
+          <div class="sim-kpi-card highlight">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 0.5rem;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                Discharge Throughput
+              </span>
+              <span id="sim-thru-badge" class="sim-delta-badge">
+                ↑ +38% Boost
+              </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.6rem;">
+              <span id="sim-thru-val" class="num" style="font-size: 2.6rem; font-weight: 800; font-family: var(--font-mono); color: #00874e; line-height: 1;">
+                +42
+              </span>
+              <span style="font-size: 0.82rem; color: var(--text-muted);">
+                patients/shift
+              </span>
+            </div>
+            <div style="font-size: 0.78rem; color: #00874e; font-weight: 600; margin-top: 0.5rem;">
+              ✓ Bed turnover cycle expedited by 1.6 hours
+            </div>
+          </div>
+
+          <div class="sim-heat-card">
+            <div class="cn-panel-h"><span>Department load · D01–D12</span><span style="color:var(--accent-mint)">live with slider</span></div>
+            <div class="heat-grid" id="simHeat" data-heat="66,61,58,70,49,60,64,55,47,66,52,60"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCENE 8 · FINALE — 3D ring carousel + giant zoom headline
+         ==================================================================== -->
+    <div id="finale" class="scene finale-scene">
+      <div class="stage finale-stage">
+        <div class="finale-copy" id="finaleCopy">
+          <div class="finale-eyebrow">PulseFlow · Track 1 Health</div>
+          <h2 class="finale-title split" id="finaleTitle">Zero Forgotten <em>Patients.</em></h2>
+        </div>
+
+        <div class="ring-wrap" id="ringWrap" aria-hidden="true">
+          <div class="ring" id="ring">
+            <div class="ring-card" style="--i:0"><div class="photo"><img src="https://images.unsplash.com/photo-1513224502586-d1e602410265?auto=format&amp;fit=crop&amp;w=700&amp;q=70" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div><span>Live vitals</span></div>
+            <div class="ring-card ring-ui" style="--i:1"><small>D01 Emergency</small><strong class="r">92%</strong><p>Saturation flagged before the queue stalls.</p></div>
+            <div class="ring-card" style="--i:2"><div class="photo"><img src="https://images.unsplash.com/photo-1666887360680-9dc27a1d2753?auto=format&amp;fit=crop&amp;w=700&amp;q=70" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div><span>Bedside care</span></div>
+            <div class="ring-card" style="--i:3"><div class="photo"><img src="https://images.unsplash.com/photo-1516841273335-e39b37888115?auto=format&amp;fit=crop&amp;w=700&amp;q=70" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div><span>Handoffs</span></div>
+            <div class="ring-card ring-ui" style="--i:4"><small>Avoidable dwell</small><strong>-35%</strong><p>Waiting-room stagnation, redirected in real time.</p></div>
+            <div class="ring-card" style="--i:5"><div class="photo"><img src="https://images.unsplash.com/photo-1712232415633-095dc9e03c5d?auto=format&amp;fit=crop&amp;w=700&amp;q=70" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div><span>Ward monitoring</span></div>
+            <div class="ring-card" style="--i:6"><div class="photo"><img src="https://images.unsplash.com/photo-1586534738560-438efdf1d205?auto=format&amp;fit=crop&amp;w=700&amp;q=70" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.style.display='none'"></div><span>Corridors</span></div>
+            <div class="ring-card ring-ui" style="--i:7"><small>Intervention SLA</small><strong class="a">&lt;5s</strong><p>From flag to charge-nurse action.</p></div>
+          </div>
+        </div>
+
+        <div class="finale-cta" id="finaleCta">
+          <p>Open the working MVP: 12-department heatmap, priority action queue and 1-click escalation, running on 8,000 encounters.</p>
+          <a href="/dashboard.html" class="btn-nav-primary magnetic" style="padding: 1rem 2rem; font-size: 1rem;">Launch Live Operations Console ↗</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Quick-jump dock -->
+  <div class="jump-dock">
+    <a href="#hero" class="jump-btn active" data-target="hero">Vision</a>
+    <a href="#problem" class="jump-btn" data-target="problem">Problem</a>
+    <a href="#solution" class="jump-btn" data-target="solution">Solution</a>
+    <a href="#architecture" class="jump-btn" data-target="architecture">Pipeline</a>
+    <a href="#gallery" class="jump-btn" data-target="gallery">Gallery</a>
+    <a href="#impact" class="jump-btn" data-target="impact">Impact</a>
+    <a href="#simulator" class="jump-btn" data-target="simulator">Surge AI</a>
+    <span style="color: #CBD5E1; margin: 0 0.2rem;">|</span>
+    <a href="/dashboard.html" class="jump-btn" style="color: #042417; background: var(--accent-mint); font-weight: 800;">
+      MVP Console ↗
+    </a>
+  </div>
+
+  <footer class="site-footer">
+    <div style="font-weight: 700; color: var(--text-hero); margin-bottom: 0.35rem;">
+      PulseFlow • Intelligent Hospital-Flow &amp; Bottleneck Prevention Engine
+    </div>
+    <p style="font-size: 0.78rem; color: var(--text-muted);">
+      Track 1 · Health — "The Forgotten Patient" · Round 1 Submission · Ready for Live Review
+    </p>
+    <p class="credits">
+      Photography from <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a> (free under the Unsplash License) by Gonzalo Kenny, Hush Naidoo Jade Photography, Jair Lázaro, Luis Melendez, Tasha Kostyuk, Piron Guillaume, Annie Spratt, Nappy, engin akyurt and CDC.
+      Operations-console, bed-board and heatmap screens are original UI previews built for this page and use illustrative sample data.
+    </p>
+  </footer>
+
+  <script>
+  (() => {
+    'use strict';
+
+    /* ---------- helpers ---------- */
+    const $  = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const seg = (p, a, b) => clamp((p - a) / (b - a));
+    const easeOut = t => 1 - Math.pow(1 - t, 3);
+    const easeIO = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const pad2 = n => String(n).padStart(2, '0');
+
+    const root = document.documentElement;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (reduce) root.classList.add('reduce-motion');
+
+    /* images that finished loading before their onload attached */
+    $$('.photo img').forEach(img => { if (img.complete && img.naturalWidth) img.classList.add('loaded'); });
+
+    /* ---------- generated UI: heat tiles + bed board ---------- */
+    function heatStyle(v) {
+      if (v >= 90) return ['#FF3B30', '#ffffff'];
+      if (v >= 80) return ['#FF9F1C', '#2a1600'];
+      if (v >= 60) return ['#B8F26B', '#10260a'];
+      return ['#00F090', '#04210f'];
+    }
+    function renderHeat(el, vals) {
+      if (!el.children.length) {
+        vals.forEach((v, i) => {
+          const t = document.createElement('div');
+          t.className = 'heat-tile';
+          t.innerHTML = '<span>D' + pad2(i + 1) + '</span><em></em>';
+          el.appendChild(t);
+        });
+      }
+      vals.forEach((v, i) => {
+        const t = el.children[i];
+        const [bg, fg] = heatStyle(v);
+        t.style.setProperty('--tc', bg);
+        t.style.setProperty('--tx', fg);
+        t.lastChild.textContent = Math.round(v) + '%';
+      });
+    }
+    $$('[data-heat]').forEach(el => renderHeat(el, el.dataset.heat.split(',').map(Number)));
+
+    (function beds() {
+      const el = $('[data-beds]'); if (!el) return;
+      let s = 7; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+      const n = +el.dataset.beds;
+      for (let i = 0; i < n; i++) {
+        const r = rnd();
+        const b = document.createElement('span');
+        b.className = 'bed ' + (r < 0.5 ? 'o' : r < 0.66 ? 'w' : r < 0.74 ? 'x' : r < 0.84 ? 'c' : '');
+        el.appendChild(b);
+      }
+    })();
+
+    /* ---------- split text ---------- */
+    function splitNode(node, c) {
+      Array.from(node.childNodes).forEach(ch => {
+        if (ch.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          ch.textContent.split(/(\s+)/).forEach(tok => {
+            if (!tok) return;
+            if (/^\s+$/.test(tok)) { frag.appendChild(document.createTextNode(' ')); return; }
+            const w = document.createElement('span'); w.className = 'w';
+            const i = document.createElement('span'); i.className = 'wi';
+            i.textContent = tok; i.style.setProperty('--i', c.n++);
+            w.appendChild(i); frag.appendChild(w);
+          });
+          node.replaceChild(frag, ch);
+        } else if (ch.nodeType === 1) splitNode(ch, c);
+      });
+    }
+    $$('.split').forEach(el => { el.setAttribute('aria-label', el.textContent.replace(/\s+/g, ' ').trim()); splitNode(el, { n: 0 }); });
+
+    /* ---------- scroll reveals + count-up (started after the loader) ---------- */
+    function countUp(el) {
+      const to = parseFloat(el.dataset.count), dec = +el.dataset.decimals || 0;
+      const pre = el.dataset.prefix || '', suf = el.dataset.suffix || '';
+      const t0 = performance.now(), dur = 1700;
+      (function step(now) {
+        const k = clamp((now - t0) / dur);
+        el.textContent = pre + (to * easeOut(k)).toFixed(dec) + suf;
+        if (k < 1) requestAnimationFrame(step);
+      })(t0);
+    }
+    function startObserving() {
+      if (!('IntersectionObserver' in window)) { $$('.reveal-item, .split').forEach(e => e.classList.add('revealed')); return; }
+      const io = new IntersectionObserver(es => es.forEach(e => {
+        if (!e.isIntersecting) return;
+        const el = e.target;
+        el.classList.add('revealed');
+        io.unobserve(el);
+        el.querySelectorAll && el.querySelectorAll('[data-count]').forEach(countUp);
+        if (el.hasAttribute && el.hasAttribute('data-count')) countUp(el);
+        setTimeout(() => el.style.setProperty('--d', '0s'), 1400);   // snap hover timing after intro
+      }), { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+      $$('.reveal-item, .split, [data-count]').forEach(el => io.observe(el));
+    }
+
+    /* ---------- 3D tilt + glare, magnetic buttons ---------- */
+    if (fine && !reduce) {
+      $$('.tilt').forEach(el => {
+        el.addEventListener('pointermove', e => {
+          const r = el.getBoundingClientRect();
+          const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+          el.classList.add('is-hot');
+          el.style.setProperty('--ry', ((px - 0.5) * 12).toFixed(2) + 'deg');
+          el.style.setProperty('--rx', ((0.5 - py) * 12).toFixed(2) + 'deg');
+          el.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+          el.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+        });
+        el.addEventListener('pointerleave', () => {
+          el.classList.remove('is-hot');
+          el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg');
+        });
+      });
+      $$('.magnetic').forEach(el => {
+        el.addEventListener('pointermove', e => {
+          const r = el.getBoundingClientRect();
+          const x = (e.clientX - (r.left + r.width / 2)) * 0.22, y = (e.clientY - (r.top + r.height / 2)) * 0.3;
+          el.style.translate = x.toFixed(1) + 'px ' + y.toFixed(1) + 'px';
+        });
+        el.addEventListener('pointerleave', () => { el.style.translate = '0 0'; });
+      });
+      /* hero chips follow the pointer */
+      const hc = $('#heroPanelWrap');
+      window.addEventListener('pointermove', e => {
+        if (!hc) return;
+        hc.style.setProperty('--px', ((e.clientX / innerWidth) - 0.5).toFixed(3));
+        hc.style.setProperty('--py', ((e.clientY / innerHeight) - 0.5).toFixed(3));
+      }, { passive: true });
+    }
+
+    /* ---------- cursor ---------- */
+    const ring = $('#cursor'), dot = $('#cursorDot');
+    let mx = -100, my = -100, rx = -100, ry = -100;
+    const useCursor = fine && !reduce;
+    if (useCursor) {
+      window.addEventListener('pointermove', e => {
+        mx = e.clientX; my = e.clientY;
+        dot.style.transform = 'translate3d(' + mx + 'px,' + my + 'px,0) translate(-50%,-50%)';
+      }, { passive: true });
+      document.addEventListener('pointerover', e => ring.classList.toggle('hover', !!e.target.closest('a, button, input, .tilt')));
+    } else { ring.remove(); dot.remove(); }
+
+    /* ---------- ECG ---------- */
+    let ecgOn = true;
+    (function ecg() {
+      const c = $('#ecgCanvas'); if (!c) return;
+      const ctx = c.getContext('2d');
+      let W, H, dpr;
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = c.clientWidth; H = c.clientHeight; if (!W || !H) return;
+        c.width = W * dpr; c.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resize(); window.addEventListener('resize', resize);
+      const g = (x, mu, s, a) => a * Math.exp(-Math.pow(x - mu, 2) / (2 * s * s));
+      const beat = t => g(t, 0.17, 0.028, 0.16) + g(t, 0.30, 0.008, -0.14) + g(t, 0.322, 0.009, 1.0) + g(t, 0.348, 0.01, -0.3) + g(t, 0.55, 0.05, 0.3);
+      const beatPx = 170, speed = 150;
+      const yAt = x => H * 0.62 - beat(((x % beatPx) + beatPx) % beatPx / beatPx) * H * 0.5;
+      let head = 0, last = performance.now();
+      function draw(now) {
+        const dt = Math.min(0.05, (now - last) / 1000); last = now;
+        if (ecgOn && W && !reduce) {
+          const prev = head; head += speed * dt;
+          ctx.lineWidth = 2.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+          ctx.strokeStyle = '#00C875'; ctx.shadowColor = 'rgba(0,240,144,.7)'; ctx.shadowBlur = 8;
+          if (head >= W) { ctx.clearRect(prev, 0, W - prev + 30, H); head = 0; ctx.clearRect(0, 0, 30, H); }
+          ctx.clearRect(head, 0, 26, H);
+          ctx.beginPath(); ctx.moveTo(prev, yAt(prev));
+          for (let x = prev; x <= head; x += 1) ctx.lineTo(x, yAt(x));
+          ctx.stroke();
+        }
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+    })();
+
+    /* ==========================================================================
+       SCENE ENGINE
+       ========================================================================== */
+    const scenes = [];
+    let VH = innerHeight;
+    function scene(el, opts, fn) { if (el) scenes.push({ el, fn, pass: !!(opts && opts.pass), top: 0, h: 0, p: -1 }); }
+
+    const galleryEl = $('#gallery'), gTrack = $('#gTrack');
+    let gDist = 0;
+    function measure() {
+      VH = innerHeight;
+      if (galleryEl && gTrack && !reduce) {
+        gDist = Math.max(0, gTrack.offsetWidth - innerWidth);
+        galleryEl.style.height = (VH + gDist) + 'px';
+      }
+      scenes.forEach(s => {
+        const r = s.el.getBoundingClientRect();
+        s.top = r.top + window.scrollY; s.h = s.el.offsetHeight; s.p = -1;
+      });
+    }
+
+    /* --- Hero --- */
+    const heroBg = $('#heroBg'), heroCopy = $('#heroCopy'), heroDark = $('#heroDark'),
+          heroReveal = $('#heroReveal'), consolePlane = $('#consolePlane'),
+          heroCap = $('#heroCaption'), hint = $('#scrollHint');
+    scene($('#hero'), {}, p => {
+      const a = easeOut(seg(p, 0, 0.42));
+      heroBg.style.transform = 'scale(' + (1 + a * 1.35).toFixed(4) + ')';
+      heroCopy.style.transform = 'scale(' + (1 + a * 0.5).toFixed(4) + ')';
+      heroCopy.style.opacity = (1 - seg(p, 0.14, 0.38)).toFixed(3);
+      heroCopy.style.pointerEvents = p > 0.36 ? 'none' : '';
+      hint.style.opacity = (1 - seg(p, 0, 0.05)).toFixed(3);
+      heroDark.style.opacity = seg(p, 0.28, 0.56).toFixed(3);
+      const b = easeIO(seg(p, 0.36, 0.8));
+      heroReveal.style.opacity = seg(p, 0.38, 0.52).toFixed(3);
+      const z = easeIO(seg(p, 0.88, 1));
+      heroReveal.style.transform = 'translate3d(0,' + ((1 - b) * 16).toFixed(2) + 'vh,0) scale(' + (0.5 + b * 0.5 + z * 0.07).toFixed(4) + ')';
+      consolePlane.style.transform = 'rotateX(' + ((1 - b) * 62).toFixed(2) + 'deg) rotateZ(' + ((1 - b) * -8).toFixed(2) + 'deg)';
+      heroCap.style.opacity = seg(p, 0.7, 0.86).toFixed(3);
+      ecgOn = p < 0.45;
+    });
+
+    /* --- Problem: zoom-out window + clock --- */
+    const pzFrame = $('#pzFrame'), pzPhoto = $('#pzPhoto'), pzUi = $('#pzUi'),
+          pzTimer = $('#pzTimer'), pzMiles = $$('#pzMiles li');
+    scene($('#pzScene'), {}, p => {
+      const o = easeIO(seg(p, 0, 0.4)), k = 1 - o;
+      pzFrame.style.clipPath = 'inset(' + (k * 26).toFixed(2) + '% ' + (k * 34).toFixed(2) + '% ' + (k * 26).toFixed(2) + '% ' + (k * 34).toFixed(2) + '% round ' + (k * 44).toFixed(1) + 'px)';
+      pzPhoto.style.transform = 'scale(' + (1 + k * 0.75).toFixed(4) + ')';
+      pzUi.style.opacity = seg(p, 0.1, 0.3).toFixed(3);
+      const m = Math.round(seg(p, 0.3, 0.94) * 260);
+      pzTimer.textContent = pad2(Math.floor(m / 60)) + ':' + pad2(m % 60);
+      pzTimer.className = 'pz-timer' + (m >= 260 ? ' crit' : m >= 160 ? ' bad' : m >= 75 ? ' warn' : '');
+      pzMiles.forEach(li => li.classList.toggle('on', m >= +li.dataset.at));
+    });
+
+    /* --- Architecture: exploded layers --- */
+    const stack = $('#stack'), planes = $$('#stack .plane'), caps = $$('.arch-cap'), dots = $$('.arch-dots i');
+    let lastActive = -1;
+    scene($('#archScene'), {}, p => {
+      const e = easeIO(seg(p, 0.04, 0.72));
+      const gap = lerp(8, 150, e);
+      stack.style.setProperty('--gap', gap.toFixed(1) + 'px');
+      stack.style.transform = 'rotateX(' + lerp(16, 60, e).toFixed(2) + 'deg) rotateZ(' + lerp(0, -40, e).toFixed(2) + 'deg) scale(' + lerp(0.82, 1, e).toFixed(3) + ')';
+      planes.forEach((pl, i) => { pl.style.transform = 'translateZ(' + (i * gap).toFixed(1) + 'px)'; });
+      const act = p < 0.34 ? 0 : p < 0.68 ? 1 : 2;
+      if (act !== lastActive) {
+        lastActive = act;
+        caps.forEach((c, i) => c.classList.toggle('on', i === act));
+        dots.forEach((d, i) => d.classList.toggle('on', i === act));
+        planes.forEach((pl, i) => pl.classList.toggle('hot', i === act));
+      }
+    });
+
+    /* --- Gallery: horizontal pin --- */
+    const gBar = $('#gBar'), gCount = $('#gCount');
+    const gPanels = $$('.g-panel'), gPhotos = $$('.g-photo');
+    scene(galleryEl, {}, p => {
+      gTrack.style.transform = 'translate3d(' + (-gDist * p).toFixed(1) + 'px,0,0)';
+      gBar.style.width = (p * 100).toFixed(2) + '%';
+      gCount.textContent = pad2(Math.min(gPanels.length, Math.round(p * (gPanels.length - 1)) + 1)) + ' / ' + pad2(gPanels.length);
+      gPhotos.forEach(panel => {
+        const r = panel.getBoundingClientRect();
+        if (r.right < -200 || r.left > innerWidth + 200) return;
+        const c = (r.left + r.width / 2 - innerWidth / 2) / innerWidth;
+        panel.firstElementChild.style.transform = 'translate3d(' + (c * -70).toFixed(1) + 'px,0,0)';
+      });
+    });
+
+    /* --- Impact roadmap line --- */
+    const rmFill = $('#rmFill'), rmSteps = $$('#roadmap .roadmap-step');
+    scene($('#roadmap'), { pass: true }, p => {
+      const k = seg(p, 0.28, 0.72);
+      rmFill.style.transform = 'scaleY(' + k.toFixed(3) + ')';
+      rmSteps.forEach((s, i) => s.classList.toggle('lit', k >= i / rmSteps.length + 0.02));
+    });
+
+    /* --- Finale: 3D ring --- */
+    const ringEl = $('#ring'), ringWrap = $('#ringWrap'), fCopy = $('#finaleCopy'), fCta = $('#finaleCta');
+    let ringBase = 0, ringIdle = 0, ringInView = false, ringScale = 0.5;
+    function applyRing() { ringEl.style.transform = 'rotateX(-9deg) rotateY(' + (-(ringBase + ringIdle)).toFixed(2) + 'deg)'; }
+    scene($('#finale'), {}, p => {
+      const z = easeIO(seg(p, 0, 0.35));
+      ringBase = p * 330;
+      ringScale = lerp(0.42, 1, z) + easeIO(seg(p, 0.8, 1)) * 0.1;
+      ringWrap.style.opacity = seg(p, 0, 0.18).toFixed(3);
+      ringWrap.style.transform = 'scale(' + ringScale.toFixed(3) + ')';
+      const t = easeOut(seg(p, 0, 0.35));
+      fCopy.style.transform = 'scale(' + lerp(0.6, 1, t).toFixed(3) + ')';
+      fCopy.style.opacity = seg(p, 0, 0.2).toFixed(3);
+      const c = easeOut(seg(p, 0.55, 0.78));
+      fCta.style.opacity = c.toFixed(3);
+      fCta.style.translate = '0 ' + ((1 - c) * 30).toFixed(1) + 'px';
+      fCta.style.pointerEvents = c > 0.6 ? 'auto' : 'none';
+      applyRing();
+    });
+    if ('IntersectionObserver' in window && ringWrap) {
+      new IntersectionObserver(es => { ringInView = es[0].isIntersecting; }, { threshold: 0 }).observe($('#finale'));
+    }
+
+    /* --- Per-frame loop: smoothed scroll → scenes --- */
+    const marqSkew = $('#marqueeSkew'), progress = $('#scroll-progress'), nav = $('#site-nav');
+    let sy = window.scrollY, last = performance.now(), lastSk = 0;
+    function frame(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const target = window.scrollY;
+      sy = reduce ? target : sy + (target - sy) * (1 - Math.pow(0.001, dt));
+      if (Math.abs(target - sy) < 0.1) sy = target;
+      const vel = target - sy;
+
+      scenes.forEach(s => {
+        const p = s.pass ? clamp((sy + VH - s.top) / (s.h + VH)) : clamp((sy - s.top) / Math.max(1, s.h - VH));
+        if (p === s.p) return;
+        s.p = p; s.fn(p);
+      });
+
+      if (marqSkew) {
+        const sk = clamp(vel * -0.05, -7, 7);
+        if (Math.abs(sk - lastSk) > 0.02) { marqSkew.style.transform = 'skewX(' + sk.toFixed(2) + 'deg)'; lastSk = sk; }
+      }
+      if (ringInView && !reduce) { ringIdle += dt * 7; applyRing(); }
+
+      if (useCursor) {
+        rx += (mx - rx) * 0.18; ry += (my - ry) * 0.18;
+        ring.style.transform = 'translate3d(' + rx.toFixed(1) + 'px,' + ry.toFixed(1) + 'px,0) translate(-50%,-50%)';
+      }
+      const max = document.documentElement.scrollHeight - innerHeight;
+      progress.style.width = (max > 0 ? (target / max) * 100 : 0) + '%';
+      nav.classList.toggle('scrolled', target > 40);
+      requestAnimationFrame(frame);
+    }
+
+    /* --- scroll-spy --- */
+    const ids = ['hero', 'problem', 'solution', 'architecture', 'gallery', 'impact', 'simulator', 'finale'];
+    let spyQueued = false;
+    function spy() {
+      spyQueued = false;
+      let cur = 'hero';
+      ids.forEach(id => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= innerHeight * 0.4) cur = id; });
+      if (cur === 'finale') cur = 'simulator';
+      $$('.jump-btn[data-target]').forEach(b => b.classList.toggle('active', b.dataset.target === cur));
+      $$('.nav-anchor').forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + cur));
+    }
+    window.addEventListener('scroll', () => { if (!spyQueued) { spyQueued = true; requestAnimationFrame(spy); } }, { passive: true });
+
+    /* ==========================================================================
+       SURGE SIMULATOR — same presets & behaviour as v1, plus live heatmap
+       ========================================================================== */
+    class SurgeSimulator {
+      constructor() {
+        this.presets = [
+          { label: "0 Extra Resources (Baseline Overload)", util: "92%", utilDelta: "Overloaded Baseline", wait: "68m", waitDelta: "+38m Over SLA", forgotten: "18", forgottenDelta: "High Risk", thru: "+0", thruDelta: "Baseline Flow" },
+          { label: "+1 Float Nurse & +2 Relief Beds", util: "82%", utilDelta: "↓ -10% Drop", wait: "51m", waitDelta: "↓ -17m Saved", forgotten: "7", forgottenDelta: "61% Cleared", thru: "+14", thruDelta: "↑ +12% Boost" },
+          { label: "+2 Float Nurses & +4 Relief Beds", util: "74%", utilDelta: "↓ -18% Drop", wait: "38m", waitDelta: "↓ -30m Saved", forgotten: "2", forgottenDelta: "89% Cleared", thru: "+28", thruDelta: "↑ +25% Boost" },
+          { label: "+3 Float Nurses & +6 Relief Beds (Recommended)", util: "66%", utilDelta: "↓ -26% Drop", wait: "26m", waitDelta: "↓ -42m Saved", forgotten: "0", forgottenDelta: "100% Cleared", thru: "+42", thruDelta: "↑ +38% Boost" },
+          { label: "+4 Float Nurses & +8 Relief Beds (Max Surge)", util: "58%", utilDelta: "↓ -34% Drop", wait: "19m", waitDelta: "↓ -49m Saved", forgotten: "0", forgottenDelta: "100% Cleared", thru: "+56", thruDelta: "↑ +51% Boost" }
+        ];
+        this.base = [92, 61, 58, 70, 49, 89, 64, 55, 47, 66, 52, 60];
+      }
+      set(id, text, bump) {
+        const el = document.getElementById(id); if (!el) return;
+        if (el.innerText === text) return;
+        el.innerText = text;
+        if (bump) { el.classList.add('bump'); setTimeout(() => el.classList.remove('bump'), 320); }
+      }
+      update(val) {
+        const v = parseInt(val, 10);
+        const p = this.presets[v];
+        this.set('slider-label-text', p.label);
+        this.set('sim-util-val', p.util, true);   this.set('sim-util-badge', p.utilDelta);
+        this.set('sim-wait-val', p.wait, true);   this.set('sim-wait-badge', p.waitDelta);
+        this.set('sim-forgotten-val', p.forgotten, true); this.set('sim-forgotten-badge', p.forgottenDelta);
+        this.set('sim-thru-val', p.thru, true);   this.set('sim-thru-badge', p.thruDelta);
+        /* live heatmap: D01 follows the headline utilisation, D06 scales with it, the rest ease slightly */
+        const u = parseInt(p.util, 10), drop = 92 - u;
+        const vals = this.base.map((b, i) => i === 0 ? u : i === 5 ? Math.round(b * u / 92) : Math.max(30, b - Math.round(drop * 0.12)));
+        const heat = $('#simHeat'); if (heat) renderHeat(heat, vals);
+      }
+      setPreset(idx) {
+        const slider = document.getElementById('surgeSlider');
+        slider.value = idx;
+        this.update(idx);
+      }
+    }
+    window.sim = new SurgeSimulator();
+
+    /* ==========================================================================
+       BOOT — loader → zoom-through → start motion
+       ========================================================================== */
+    function boot() {
+      root.classList.add('ready');
+      startObserving();
+      if (!reduce) {
+        measure();
+        requestAnimationFrame(frame);
+        if ('ResizeObserver' in window) {
+          let t; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(measure, 150); }).observe(document.body);
+        }
+        window.addEventListener('resize', () => { clearTimeout(boot.t); boot.t = setTimeout(measure, 150); });
+        window.addEventListener('load', measure);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+      } else {
+        const t = $('#pzTimer'); if (t) t.textContent = '04:20';
+        $$('#pzMiles li').forEach(li => li.classList.add('on'));
+        $$('.cn-panel [data-heat]').forEach(() => {});
+      }
+      spy();
+    }
+
+    const loader = $('#loader'), num = $('#loadNum');
+    if (reduce || !loader) { if (loader) loader.remove(); boot(); }
+    else {
+      const t0 = performance.now(), dur = 1900;
+      (function tick(now) {
+        const k = clamp((now - t0) / dur);
+        num.textContent = Math.round(easeOut(k) * 100);
+        if (k < 1) requestAnimationFrame(tick);
+        else {
+          loader.classList.add('done');
+          boot();
+          setTimeout(() => loader.remove(), 1600);
+        }
+      })(t0);
+    }
+  })();
+  </script>
+</body>
+</html>
